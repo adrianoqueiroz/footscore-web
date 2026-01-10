@@ -1,0 +1,175 @@
+import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { authService } from '@/services/auth.service'
+import { User } from '@/types'
+import Login from '@/pages/Login'
+import Register from '@/pages/Register' // Import the new Register component
+import Phone from '@/pages/Phone'
+import Matches from '@/pages/Matches'
+import Predictions from '@/pages/Predictions'
+import Tickets from '@/pages/Tickets'
+import TicketDetails from '@/pages/TicketDetails'
+import Ranking from '@/pages/Ranking'
+import Admin from '@/pages/Admin'
+import EditRound from '@/pages/EditRound'
+import EditPhone from '@/pages/EditPhone'
+import Profile from '@/pages/Profile'
+import About from '@/pages/About'
+import AppHeader from '@/components/AppHeader'
+import BottomNav from '@/components/ui/BottomNav'
+import { usePWANavigation } from '@/hooks/usePWANavigation'
+import { ToastProvider } from '@/contexts/ToastContext'
+import { ConfirmProvider } from '@/contexts/ConfirmContext'
+import { RoundSelectorProvider } from '@/contexts/RoundSelectorContext'
+
+const AdminRoute = () => {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Usar um pequeno delay para evitar flash de loading muito rápido
+    const timer = setTimeout(() => {
+      const currentUser = authService.getCurrentUser()
+      console.log('AdminRoute - currentUser:', currentUser)
+      if (currentUser) {
+        setUser(currentUser)
+      }
+      setLoading(false)
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  console.log('AdminRoute render:', { loading, user, isAdmin: user?.isAdmin })
+
+  if (loading) {
+    return (
+      <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07] min-h-screen">
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 p-4 md:p-6 lg:p-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Painel Administrativo</h1>
+            <div className="w-40 h-10"></div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {/* Placeholder para os cards do menu */}
+            <div className="h-20 bg-secondary/20 rounded-lg animate-pulse"></div>
+            <div className="h-20 bg-secondary/20 rounded-lg animate-pulse"></div>
+            <div className="h-20 bg-secondary/20 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || !user.isAdmin) {
+    console.log('AdminRoute - redirecting to /rounds')
+    return <Navigate to="/rounds" />
+  }
+
+  return <Outlet />
+}
+
+import { ConnectionProvider } from '@/contexts/ConnectionContext'
+
+const AppRoutes = () => {
+  return (
+    <ConnectionProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <RoundSelectorProvider>
+            <Router>
+              <Routes>
+                <Route element={<PublicRoute />}>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                </Route>
+                <Route element={<PrivateRoute />}>
+                  <Route path="/rounds" element={<Matches />} />
+                  <Route path="/games" element={<Predictions />} />
+                  <Route path="/tickets" element={<Tickets />} />
+                  <Route path="/tickets/:ticketId" element={<TicketDetails />} />
+                  <Route path="/ranking" element={<Ranking />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/edit-phone" element={<EditPhone />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route element={<AdminRoute />}>
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/edit-round" element={<EditRound />} />
+                  </Route>
+                  <Route path="/" element={<Navigate to="/rounds" replace />} />
+                </Route>
+              </Routes>
+            </Router>
+          </RoundSelectorProvider>
+        </ConfirmProvider>
+      </ToastProvider>
+    </ConnectionProvider>
+  )
+}
+
+const PublicRoute = () => {
+  const isAuthenticated = authService.isAuthenticated()
+  return isAuthenticated ? <Navigate to="/" /> : <Outlet />
+}
+
+const PrivateRoute = () => {
+  const [user, setUser] = useState<User | null>(null)
+  const [needsPhone, setNeedsPhone] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Usar um pequeno delay para evitar flash de loading muito rápido
+    const timer = setTimeout(() => {
+      const currentUser = authService.getCurrentUser()
+      if (currentUser) {
+        setUser(currentUser)
+        setNeedsPhone(!currentUser.phone)
+      }
+      setLoading(false)
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handlePhoneComplete = () => {
+    const currentUser = authService.getCurrentUser()
+    if (currentUser) {
+      setUser(currentUser)
+      setNeedsPhone(false)
+    }
+  }
+
+  if (loading) {
+    return null // Retornar null em vez de "Loading..." para evitar flash
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />
+  }
+
+  if (needsPhone) {
+    return <Phone onComplete={handlePhoneComplete} />
+  }
+
+  return <MainLayout user={user} />
+}
+
+const MainLayout = ({ user }: { user: User }) => {
+  usePWANavigation()
+
+  return (
+    <div className="flex flex-col h-full bg-background md:flex-row">
+      <AppHeader />
+      <BottomNav isAdmin={!!user?.isAdmin} />
+      <main className="flex-1 pb-20 md:pb-0 md:ml-64 md:pt-16 md:pl-0" style={{ 
+        minHeight: 0,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch'
+      }}>
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
+export default AppRoutes
