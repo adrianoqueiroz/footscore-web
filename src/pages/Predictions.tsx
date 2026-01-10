@@ -447,26 +447,44 @@ export default function Predictions() {
                     transition={{ delay: index * 0.03 }}
                   >
                     <Card
-                      className="p-2 cursor-pointer hover:bg-secondary/30 transition-colors"
+                      className="p-3 cursor-pointer hover:bg-secondary/30 transition-colors"
                       onClick={() => handleEditMatch(match.id)}
                     >
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="text-xs text-muted-foreground font-medium">
-                            {dateDisplay ? `${dateDisplay.dayOfWeek} ${dateDisplay.date} • ${dateDisplay.time}` : 'Data não definida'}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-4 w-4" noCircle />
-                            <span className="font-medium">{getTeamDisplayName(match.homeTeam)}</span>
-                            <span className="text-muted-foreground">×</span>
-                            <span className="font-medium">{getTeamDisplayName(match.awayTeam)}</span>
-                            <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-4 w-4" noCircle />
+                      {/* Data e horário */}
+                      <div className="text-xs text-muted-foreground font-medium mb-2 text-center">
+                        {dateDisplay ? `${dateDisplay.dayOfWeek} ${dateDisplay.date} • ${dateDisplay.time}` : 'Data não definida'}
+                      </div>
+
+                      {/* Layout principal: Confronto + Palpite */}
+                      <div className="flex items-center justify-between gap-1.5">
+                        {/* Confronto (esquerda) - vertical */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-center gap-2 px-1">
+                            {/* Home */}
+                            <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
+                              <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-6 w-6" noCircle />
+                              <span className="font-semibold text-xs text-center truncate leading-tight">{getTeamDisplayName(match.homeTeam)}</span>
+                            </div>
+
+                            {/* VS */}
+                            <span className="text-xs text-muted-foreground flex-shrink-0">vs</span>
+
+                            {/* Away */}
+                            <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
+                              <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-6 w-6" noCircle />
+                              <span className="font-semibold text-xs text-center truncate leading-tight">{getTeamDisplayName(match.awayTeam)}</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 font-bold">
-                          <span className="text-primary">{pred.homeScore}</span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className="text-primary">{pred.awayScore}</span>
+
+                        {/* Palpite (direita) */}
+                        <div className="flex-shrink-0 px-1.5">
+                          <div className="flex items-center gap-0.5 bg-primary/20 rounded-lg px-2 py-1">
+                            <span className="font-bold text-sm text-primary">{pred.homeScore}</span>
+                            <span className="text-[10px] text-muted-foreground">x</span>
+                            <span className="font-bold text-sm text-primary">{pred.awayScore}</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground text-center mt-0.5 leading-tight">Palpite</p>
                         </div>
                       </div>
                     </Card>
