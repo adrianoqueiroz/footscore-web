@@ -450,16 +450,11 @@ export default function Predictions() {
                       className="p-3 cursor-pointer hover:bg-secondary/30 transition-colors"
                       onClick={() => handleEditMatch(match.id)}
                     >
-                      {/* Data e horário */}
-                      <div className="text-xs text-muted-foreground font-medium mb-2 text-center">
-                        {dateDisplay ? `${dateDisplay.dayOfWeek} ${dateDisplay.date} • ${dateDisplay.time}` : 'Data não definida'}
-                      </div>
-
                       {/* Layout principal: Confronto + Palpite */}
                       <div className="flex items-center justify-between gap-1.5">
                         {/* Confronto (esquerda) - vertical */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-center gap-2 px-1">
+                          <div className="flex items-center justify-center gap-1.5 px-1">
                             {/* Home */}
                             <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
                               <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-6 w-6" noCircle />
@@ -479,7 +474,7 @@ export default function Predictions() {
 
                         {/* Palpite (direita) */}
                         <div className="flex-shrink-0 px-1.5">
-                          <div className="flex items-center gap-0.5 bg-primary/20 rounded-lg px-2 py-1">
+                          <div className="flex items-center gap-0.5 bg-primary/20 rounded-lg px-1.5 py-0.5">
                             <span className="font-bold text-sm text-primary">{pred.homeScore}</span>
                             <span className="text-[10px] text-muted-foreground">x</span>
                             <span className="font-bold text-sm text-primary">{pred.awayScore}</span>
