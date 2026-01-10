@@ -450,36 +450,61 @@ export default function Predictions() {
                       className="p-3 cursor-pointer hover:bg-secondary/30 transition-colors"
                       onClick={() => handleEditMatch(match.id)}
                     >
-                      {/* Layout principal: Confronto + Palpite */}
-                      <div className="flex items-center justify-between gap-1.5">
-                        {/* Confronto (esquerda) - vertical */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-center gap-1.5 px-1">
-                            {/* Home */}
-                            <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
-                              <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-6 w-6" noCircle />
-                              <span className="font-semibold text-xs text-center truncate leading-tight">{getTeamDisplayName(match.homeTeam)}</span>
+                      <div className="flex items-center gap-3">
+                        {/* Data e hora */}
+                        <div className="flex items-center flex-shrink-0">
+                          {dateDisplay ? (
+                            <div className="flex flex-col items-start min-w-[3rem]">
+                              <span className="text-muted-foreground leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                {dateDisplay.dayOfWeek}
+                              </span>
+                              <span className="text-muted-foreground/80 leading-tight text-[9px] font-medium mt-0.5">
+                                {dateDisplay.date}
+                                {' '}
+                                <span className="font-semibold">
+                                  {dateDisplay.time}
+                                </span>
+                              </span>
                             </div>
-
-                            {/* VS */}
-                            <span className="text-xs text-muted-foreground flex-shrink-0">vs</span>
-
-                            {/* Away */}
-                            <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
-                              <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-6 w-6" noCircle />
-                              <span className="font-semibold text-xs text-center truncate leading-tight">{getTeamDisplayName(match.awayTeam)}</span>
+                          ) : (
+                            <div className="flex flex-col items-start min-w-[3rem]">
+                              <span className="text-muted-foreground leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                ---
+                              </span>
+                              <span className="text-muted-foreground/70 leading-tight text-[9px] font-medium mt-0.5">
+                                --/-- ??:??
+                              </span>
                             </div>
-                          </div>
+                          )}
                         </div>
 
-                        {/* Palpite (direita) */}
-                        <div className="flex-shrink-0 px-1.5">
-                          <div className="flex items-center gap-0.5 bg-primary/20 rounded-lg px-1.5 py-0.5">
-                            <span className="font-bold text-sm text-primary">{pred.homeScore}</span>
-                            <span className="text-[10px] text-muted-foreground">x</span>
-                            <span className="font-bold text-sm text-primary">{pred.awayScore}</span>
+                        {/* Separador vertical */}
+                        <div className="h-6 w-px bg-border flex-shrink-0" />
+
+                        {/* Confronto compacto com palpite */}
+                        <div className="flex-1 flex items-center min-w-0">
+                          {/* Nome time 1 */}
+                          <div className="flex-1 flex justify-end pr-1.5 min-w-0">
+                            <span className="text-sm font-semibold truncate text-right leading-tight text-foreground">
+                              {getTeamDisplayName(match.homeTeam)}
+                            </span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground text-center mt-0.5 leading-tight">Palpite</p>
+
+                          {/* Escudos e palpite centralizados */}
+                          <div className="w-[80px] flex items-center gap-1 justify-center flex-shrink-0 px-1">
+                            <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                            <span className="text-xs font-bold flex-shrink-0 min-w-[2rem] text-center text-primary">
+                              {pred.homeScore} × {pred.awayScore}
+                            </span>
+                            <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                          </div>
+
+                          {/* Nome time 2 */}
+                          <div className="flex-1 flex justify-start pl-1.5 min-w-0">
+                            <span className="text-sm font-semibold truncate text-left leading-tight text-foreground">
+                              {getTeamDisplayName(match.awayTeam)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </Card>
