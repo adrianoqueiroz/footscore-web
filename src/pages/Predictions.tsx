@@ -456,9 +456,11 @@ export default function Predictions() {
                             {dateDisplay ? `${dateDisplay.dayOfWeek} ${dateDisplay.date} • ${dateDisplay.time}` : 'Data não definida'}
                           </div>
                           <div className="flex items-center gap-2">
+                            <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-4 w-4" noCircle />
                             <span className="font-medium">{getTeamDisplayName(match.homeTeam)}</span>
                             <span className="text-muted-foreground">×</span>
                             <span className="font-medium">{getTeamDisplayName(match.awayTeam)}</span>
+                            <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-4 w-4" noCircle />
                           </div>
                         </div>
                         <div className="flex items-center gap-2 font-bold">
@@ -478,7 +480,7 @@ export default function Predictions() {
             <div className="flex justify-center pt-4">
               <Button
                 variant="primary"
-                onClick={() => setShowSummaryModal(true)}
+                onClick={handleSubmit}
                 disabled={submitting || completedMatches === 0}
                 className="min-w-[200px]"
               >
