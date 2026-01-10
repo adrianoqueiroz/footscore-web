@@ -519,7 +519,7 @@ export default function Predictions() {
               <Button
                 variant="primary"
                 onClick={handleSubmit}
-                disabled={submitting || completedMatches === 0}
+                disabled={submitting || matches.length === 0}
                 className="min-w-[200px]"
               >
                 {submitting ? 'Enviando...' : 'Concluir'}
