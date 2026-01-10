@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Calendar, Clock, Save, Loader2, CheckCircle2, XCircle, Plus, Trash2, CheckCircle, AlertCircle, ArrowLeft, Minus, Edit, GripVertical, Move } from 'lucide-react'
+import { Calendar, Clock, Save, Loader2, CheckCircle2, XCircle, Plus, Trash2, CheckCircle, AlertCircle, ArrowLeft, Minus, Edit, GripVertical, Move, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -149,6 +149,9 @@ export default function EditRound() {
   const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
   const [isReordering, setIsReordering] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
+  const carouselContainerRef = useRef<HTMLDivElement>(null)
+  const [carouselWidth, setCarouselWidth] = useState(0)
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
 
   // Configurar sensores para drag and drop
   const sensors = useSensors(
@@ -272,6 +275,38 @@ export default function EditRound() {
       setCustomTimeMatches(customMatches)
     }
   }, [matches])
+
+  // Calcular largura do carrossel
+  useEffect(() => {
+    if (matches.length === 0) return
+
+    const updateCarouselWidth = () => {
+      if (carouselContainerRef.current) {
+        const rect = carouselContainerRef.current.getBoundingClientRect()
+        if (rect.width > 0) {
+          setCarouselWidth(rect.width)
+        }
+      }
+    }
+
+    const timeoutId = setTimeout(updateCarouselWidth, 100)
+
+    const observer = new ResizeObserver(() => {
+      updateCarouselWidth()
+    })
+
+    if (carouselContainerRef.current) {
+      observer.observe(carouselContainerRef.current)
+    }
+
+    window.addEventListener('resize', updateCarouselWidth)
+
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('resize', updateCarouselWidth)
+      observer.disconnect()
+    }
+  }, [matches.length])
 
   const loadMatches = async (round: number) => {
     setLoadingMatches(true)
@@ -677,6 +712,14 @@ export default function EditRound() {
     }
   }
 
+  const handleCarouselNavigation = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentMatchIndex > 0) {
+      setCurrentMatchIndex(currentMatchIndex - 1)
+    } else if (direction === 'next' && currentMatchIndex < matches.length - 1) {
+      setCurrentMatchIndex(currentMatchIndex + 1)
+    }
+  }
+
   const handleSaveRound = async () => {
     if (!selectedRound) return
 
@@ -878,8 +921,8 @@ export default function EditRound() {
                   <SortableItem key={match.id} id={match.id} isReordering={isReordering}>
                     <div className="space-y-2">
                 <Card className={`p-3 lg:p-4 border ${
-                  match.includeInRound === false 
-                    ? 'bg-secondary/10 border-border/30 opacity-60' 
+                  match.includeInRound === false
+                    ? 'bg-secondary/10 border-border/30 opacity-60'
                     : 'bg-secondary/30 border-border/50'
                 }`}>
                   {/* Linha 1: Times - apenas visualização (não editável) */}
@@ -1431,6 +1474,318 @@ export default function EditRound() {
           )}
 
         </Card>
+
+        {/* Carrossel de Jogos */}
+        {matches.length > 0 && (
+          <Card className={`p-0 relative overflow-hidden`}>
+
+            {/* Carrossel */}
+            <div
+              ref={carouselContainerRef}
+              className="relative overflow-hidden pt-3 pb-1"
+              style={{ touchAction: 'pan-x' }}
+            >
+              <motion.div
+                className="flex"
+                animate={{
+                  x: `-${currentMatchIndex * 100}%`,
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 300,
+                  damping: 30,
+                }}
+              >
+                {matches.map((match) => {
+                  const isCurrentMatch = match.id === editingMatchId
+
+                  return (
+                    <div
+                      key={match.id}
+                      className="flex-shrink-0 p-4"
+                      style={{
+                        width: carouselWidth > 0 ? carouselWidth : '100%',
+                        minWidth: carouselWidth > 0 ? carouselWidth : '100%',
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-2 w-full">
+                        <div className="flex items-center gap-2 w-full relative z-30 px-2">
+                          <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
+                            <span className="text-xs font-medium text-muted-foreground">Casa</span>
+                            <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="xl" className="h-20 w-20" noCircle />
+                            <span className="text-sm font-semibold text-center break-words leading-tight px-1">{match.homeTeam}</span>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'}`}>
+                                {match.homeScore ?? 0}
+                              </div>
+                              <span className="text-3xl font-bold text-muted-foreground">×</span>
+                              <div className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'}`}>
+                                {match.awayScore ?? 0}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
+                            <span className="text-xs font-medium text-muted-foreground">Visitante</span>
+                            <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="xl" className="h-20 w-20" noCircle />
+                            <span className="text-sm font-semibold text-center break-words leading-tight px-1">{match.awayTeam}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </motion.div>
+            </div>
+
+            {/* Barra de progresso */}
+            <div className="w-full px-4 pt-2 pb-2 border-t border-border/30">
+              <div className="w-full h-1 bg-secondary rounded-full overflow-hidden mb-2">
+                <motion.div
+                  className="h-full bg-primary rounded-full"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${matches.length > 0 ? ((currentMatchIndex + 1) / matches.length) * 100 : 0}%` }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                {matches.length > 0 ? `Jogo ${currentMatchIndex + 1} de ${matches.length}` : ''}
+              </p>
+            </div>
+          </Card>
+        )}
+
+        {/* Navegação do Carrossel */}
+        {matches.length > 1 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4 relative z-30">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => handleCarouselNavigation('prev')}
+                disabled={currentMatchIndex === 0}
+                className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                <span className="text-sm">Anterior</span>
+              </Button>
+
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => handleCarouselNavigation('next')}
+                disabled={currentMatchIndex === matches.length - 1}
+                className="flex-1"
+              >
+                <span className="text-sm">Próximo</span>
+                <ChevronRight className="h-5 w-5 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Card de atualização de placar */}
+        {editingMatchId && (() => {
+          const currentMatch = matches.find(m => m.id === editingMatchId)
+          if (!currentMatch) return null
+
+          return (
+            <Card className="p-0 relative overflow-hidden">
+              <div className="px-4 pt-3 pb-2 border-b border-border/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-base font-semibold text-foreground">
+                    Atualizar Placar
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingMatchId(null)}
+                    className="h-6 px-2"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2 w-full p-4">
+                {/* Controles Casa */}
+                <div className="flex-1 flex flex-col items-center gap-3">
+                  <span className="text-xs font-medium text-muted-foreground">Casa</span>
+                  <div className="flex items-center gap-6">
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.05 }}
+                      className="relative"
+                    >
+                      <AnimatePresence>
+                        {showScoreHint[currentMatch.id] === 'home' && (
+                          <motion.div
+                            className="absolute inset-0 rounded-full border-4 border-primary -inset-1 pointer-events-none"
+                            initial={{ scale: 1, opacity: 1 }}
+                            animate={{ scale: 1.1, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{
+                              duration: 0.6,
+                              repeat: 2,
+                              ease: [0.4, 0, 0.2, 1],
+                              repeatType: "loop",
+                              repeatDelay: 0.2
+                            }}
+                          />
+                        )}
+                      </AnimatePresence>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          handleScoreUpdate(currentMatch.id, 'homeScore', (currentMatch.homeScore ?? 0) - 1)
+                          setShowScoreHint(prev => {
+                            const next = { ...prev }
+                            delete next[currentMatch.id]
+                            return next
+                          })
+                        }}
+                        disabled={savingScore[currentMatch.id] || (currentMatch.homeScore ?? 0) === 0}
+                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Minus className="h-9 w-9" />
+                      </Button>
+                    </motion.div>
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.05 }}
+                      className="relative"
+                    >
+                      <AnimatePresence>
+                        {showScoreHint[currentMatch.id] === 'home' && (
+                          <motion.div
+                            className="absolute inset-0 rounded-full border-4 border-primary -inset-1 pointer-events-none"
+                            initial={{ scale: 1, opacity: 1 }}
+                            animate={{ scale: 1.1, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{
+                              duration: 0.6,
+                              repeat: 2,
+                              ease: [0.4, 0, 0.2, 1],
+                              repeatType: "loop",
+                              repeatDelay: 0.2
+                            }}
+                          />
+                        )}
+                      </AnimatePresence>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          handleScoreUpdate(currentMatch.id, 'homeScore', (currentMatch.homeScore ?? 0) + 1)
+                          setShowScoreHint(prev => {
+                            const next = { ...prev }
+                            delete next[currentMatch.id]
+                            return next
+                          })
+                        }}
+                        disabled={savingScore[currentMatch.id] || (currentMatch.homeScore ?? 0) === 10}
+                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-9 w-9" />
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Separador visual vertical */}
+                <div className="h-24 w-px bg-border/60 flex-shrink-0" />
+
+                {/* Controles Visitante */}
+                <div className="flex-1 flex flex-col items-center gap-3">
+                  <span className="text-xs font-medium text-muted-foreground">Visitante</span>
+                  <div className="flex items-center gap-6">
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.05 }}
+                      className="relative"
+                    >
+                      <AnimatePresence>
+                        {showScoreHint[currentMatch.id] === 'away' && (
+                          <motion.div
+                            className="absolute inset-0 rounded-full border-4 border-primary -inset-1 pointer-events-none"
+                            initial={{ scale: 1, opacity: 1 }}
+                            animate={{ scale: 1.1, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{
+                              duration: 0.6,
+                              repeat: 2,
+                              ease: [0.4, 0, 0.2, 1],
+                              repeatType: "loop",
+                              repeatDelay: 0.2
+                            }}
+                          />
+                        )}
+                      </AnimatePresence>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          handleScoreUpdate(currentMatch.id, 'awayScore', (currentMatch.awayScore ?? 0) - 1)
+                          setShowScoreHint(prev => {
+                            const next = { ...prev }
+                            delete next[currentMatch.id]
+                            return next
+                          })
+                        }}
+                        disabled={savingScore[currentMatch.id] || (currentMatch.awayScore ?? 0) === 0}
+                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Minus className="h-9 w-9" />
+                      </Button>
+                    </motion.div>
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.05 }}
+                      className="relative"
+                    >
+                      <AnimatePresence>
+                        {showScoreHint[currentMatch.id] === 'away' && (
+                          <motion.div
+                            className="absolute inset-0 rounded-full border-4 border-primary -inset-1 pointer-events-none"
+                            initial={{ scale: 1, opacity: 1 }}
+                            animate={{ scale: 1.1, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{
+                              duration: 0.6,
+                              repeat: 2,
+                              ease: [0.4, 0, 0.2, 1],
+                              repeatType: "loop",
+                              repeatDelay: 0.2
+                            }}
+                          />
+                        )}
+                      </AnimatePresence>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          handleScoreUpdate(currentMatch.id, 'awayScore', (currentMatch.awayScore ?? 0) + 1)
+                          setShowScoreHint(prev => {
+                            const next = { ...prev }
+                            delete next[currentMatch.id]
+                            return next
+                          })
+                        }}
+                        disabled={savingScore[currentMatch.id] || (currentMatch.awayScore ?? 0) === 10}
+                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-9 w-9" />
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )
+        })()}
 
         {/* Botão para deletar todos os palpites da rodada */}
         <Card className="p-4 border-red-500/30 bg-red-500/5">

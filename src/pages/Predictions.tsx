@@ -325,7 +325,7 @@ export default function Predictions() {
     if (!hasPredictions) {
       const confirmed = await confirm.confirm({
         title: 'Atenção',
-        message: 'Nenhum placar foi alterado (todos estão em 0x0).\n\nDeseja criar um palpite sem palpites?',
+        message: 'Nenhum placar foi alterado (todos estão em 0x0).\n\nDeseja continuar mesmo assim?',
         variant: 'warning',
       })
       if (!confirmed) return
@@ -515,12 +515,12 @@ export default function Predictions() {
           )}
 
           {matches.length > 0 && (
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-center pt-2">
               <Button
                 variant="primary"
                 onClick={handleSubmit}
-                disabled={submitting || matches.length === 0}
-                className="min-w-[200px]"
+                disabled={submitting}
+                className="w-full"
               >
                 {submitting ? 'Enviando...' : 'Concluir'}
               </Button>

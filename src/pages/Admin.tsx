@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle, Clock, Radio, Plus, X, Settings, Trophy, Phone, Pencil, Loader2, Save, Users, ArrowLeft, Info, Search, CheckCircle2, XCircle, Trash2, Calendar, AlertCircle, Minus, Move, GripVertical } from 'lucide-react'
+import { CheckCircle, Clock, Radio, Plus, X, Settings, Trophy, Phone, Pencil, Loader2, Save, Users, ArrowLeft, Info, Search, CheckCircle2, XCircle, Trash2, Calendar, AlertCircle, Minus, Move, GripVertical, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -144,6 +144,13 @@ export default function Admin() {
   const [allRoundsForSelector, setAllRoundsForSelector] = useState<number[]>([]) // Todas as rodadas (incluindo inativas) para o seletor
   const [updateGamesLoading, setUpdateGamesLoading] = useState(false)
   const [roundsSelectorLoading, setRoundsSelectorLoading] = useState(false) // Loading específico para o seletor na view update-games
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const carouselContainerRef = useRef<HTMLDivElement>(null)
+  const [carouselWidth, setCarouselWidth] = useState(0)
+  const [showDateTimeModal, setShowDateTimeModal] = useState(false)
+  const [editingMatchForDateTime, setEditingMatchForDateTime] = useState<string | null>(null)
+  const [tempDate, setTempDate] = useState('')
+  const [tempTime, setTempTime] = useState('')
   const [roundsSelectorInitialized, setRoundsSelectorInitialized] = useState(false) // Indica se já carregou as rodadas pelo menos uma vez
   const [allowsNewBets, setAllowsNewBets] = useState(true)
   const [isActive, setIsActive] = useState(true)
@@ -264,6 +271,64 @@ export default function Admin() {
       loadUsers()
     }
   }, [currentView])
+
+  // Calcular largura do carrossel
+  useEffect(() => {
+    if (updateGamesMatches.length === 0) return
+
+    const updateCarouselWidth = () => {
+      if (carouselContainerRef.current) {
+        const rect = carouselContainerRef.current.getBoundingClientRect()
+        if (rect.width > 0) {
+          setCarouselWidth(rect.width)
+        }
+      }
+    }
+
+    const timeoutId = setTimeout(updateCarouselWidth, 100)
+
+    const observer = new ResizeObserver(() => {
+      updateCarouselWidth()
+    })
+
+    if (carouselContainerRef.current) {
+      observer.observe(carouselContainerRef.current)
+    }
+
+    window.addEventListener('resize', updateCarouselWidth)
+
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('resize', updateCarouselWidth)
+      observer.disconnect()
+    }
+  }, [updateGamesMatches.length])
+
+  const handleCarouselNavigation = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentMatchIndex > 0) {
+      const newIndex = currentMatchIndex - 1
+      setCurrentMatchIndex(newIndex)
+      setSelectedMatchId(updateGamesMatches[newIndex].id)
+    } else if (direction === 'next' && currentMatchIndex < updateGamesMatches.length - 1) {
+      const newIndex = currentMatchIndex + 1
+      setCurrentMatchIndex(newIndex)
+      setSelectedMatchId(updateGamesMatches[newIndex].id)
+    }
+  }
+
+  const handleSaveDateTime = () => {
+    if (!editingMatchForDateTime) return
+
+    if (tempDate !== (updateGamesMatches.find(m => m.id === editingMatchForDateTime)?.date || '')) {
+      handleMatchChange(editingMatchForDateTime, 'date', tempDate)
+    }
+    if (tempTime !== (updateGamesMatches.find(m => m.id === editingMatchForDateTime)?.time || '')) {
+      handleMatchChange(editingMatchForDateTime, 'time', tempTime)
+    }
+
+    setShowDateTimeModal(false)
+    setEditingMatchForDateTime(null)
+  }
 
   const loadData = async () => {
     if (!selectedRound) return
@@ -787,6 +852,11 @@ export default function Admin() {
   const handleMatchClick = (matchId: string) => {
     setSelectedMatchId(matchId)
     setUpdateGamesView('edit')
+    // Definir o índice atual baseado na posição do jogo na lista
+    const matchIndex = updateGamesMatches.findIndex(m => m.id === matchId)
+    if (matchIndex !== -1) {
+      setCurrentMatchIndex(matchIndex)
+    }
   }
 
   const handleBackToList = () => {
@@ -1123,8 +1193,8 @@ export default function Admin() {
 
       return (
         <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07] min-h-0 overflow-x-hidden">
-          <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-6 p-4 md:p-6 lg:p-8">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-2 p-4 md:p-6 lg:p-8">
+            <div className="flex items-center gap-3 mb-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -1147,170 +1217,233 @@ export default function Admin() {
                 </div>
               </div>
             </div>
-            <div className="space-y-4 pt-4">
-              {/* Card para Data/Hora e Confronto */}
-              <Card className="p-4">
-                {/* Data e Hora do jogo */}
-                <div className="mb-4 pb-4 border-b border-border/50">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative flex items-center h-10">
-                      <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-                      <Input
-                        type="date"
-                        value={currentMatch.date}
-                        onChange={e => handleMatchChange(currentMatch.id, 'date', e.target.value)}
-                        className="h-10 text-sm pl-9 pr-2 w-full"
-                      />
-                    </div>
-                    <div className="relative flex items-center h-10">
-                      <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-                      {showTimeSelector ? (
-                        <select
-                          value={currentMatch.time || ''}
-                          onChange={(e) => {
-                            const newTime = e.target.value
-                            handleMatchChange(currentMatch.id, 'time', newTime)
-                            setCustomTimeMatches(prev => {
-                              const next = new Set(prev)
-                              next.delete(currentMatch.id)
-                              return next
-                            })
-                          }}
-                          className="w-full h-10 text-sm pl-9 pr-2 rounded border border-border bg-background"
-                        >
-                          <option value="">Selecione</option>
-                          {config.getGameTimesSync().map(time => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Input
-                          type="time"
-                          value={currentMatch.time}
-                          onChange={e => handleMatchChange(currentMatch.id, 'time', e.target.value)}
-                          className="h-10 text-sm pl-9 pr-2 w-full"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Confronto com placar - estilo Games.tsx */}
-                <div className="mb-4 pb-4 border-b border-border/50">
-                  <div className="flex flex-col items-center gap-2 w-full">
-                    <div className="flex items-center gap-2 w-full relative z-30 px-2">
-                      <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
-                        <span className="text-xs font-medium text-muted-foreground">Casa</span>
-                        <TeamLogo teamName={currentMatch.homeTeam} logo={currentMatch.homeTeamLogo} size="xl" className="h-20 w-20" noCircle />
-                        <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(currentMatch.homeTeam)}</span>
-                      </div>
-                      
-                      <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="text-4xl font-bold text-foreground w-12 text-center tabular-nums relative cursor-pointer hover:opacity-70 transition-opacity"
-                            onClick={() => {
-                              setShowScoreHint(prev => {
-                                // Se já está ativo, para a animação
-                                if (prev[currentMatch.id] === 'home') {
-                                  const next = { ...prev }
-                                  delete next[currentMatch.id]
-                                  return next
+            {/* Carrossel de Jogos */}
+            {updateGamesMatches.length > 0 && (
+              <Card className="p-0 relative overflow-hidden">
+                {/* Carrossel */}
+                <div
+                  ref={carouselContainerRef}
+                  className="relative overflow-hidden pt-3 pb-1"
+                  style={{ touchAction: 'pan-x' }}
+                >
+                  <motion.div
+                    className="flex"
+                    animate={{
+                      x: `-${currentMatchIndex * 100}%`,
+                    }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 30,
+                    }}
+                    drag="x"
+                    dragConstraints={
+                      carouselWidth > 0
+                        ? {
+                            left: -(updateGamesMatches.length - 1) * carouselWidth,
+                            right: 0,
+                          }
+                        : false
+                    }
+                    dragElastic={0.2}
+                    dragDirectionLock={true}
+                    onDragStart={(e) => {
+                      const target = e.target as HTMLElement
+                      if (target.closest('button') || target.closest('[data-no-drag]')) {
+                        return false
+                      }
+                    }}
+                    onDragEnd={(_, info) => {
+                      const threshold = 80
+                      const direction = info.offset.x > 0 ? -1 : 1
+                      const newIndex = currentMatchIndex + direction
+
+                      if (Math.abs(info.offset.x) > threshold) {
+                        if (newIndex >= 0 && newIndex < updateGamesMatches.length) {
+                          setCurrentMatchIndex(newIndex)
+                          setSelectedMatchId(updateGamesMatches[newIndex].id)
+                        }
+                      }
+                    }}
+                  >
+                    {updateGamesMatches.map((match) => {
+                      const isCurrentMatch = match.id === selectedMatchId
+
+                      return (
+                        <div
+                          key={match.id}
+                          className="flex-shrink-0 p-3"
+                          style={{
+                            width: carouselWidth > 0 ? carouselWidth : '100%',
+                            minWidth: carouselWidth > 0 ? carouselWidth : '100%',
+                          }}
+                        >
+                          <div className="flex flex-col items-center gap-2 w-full">
+                            {/* Data e hora do jogo */}
+                            <div
+                              className="flex items-center gap-1.5 mb-0.5 px-1 py-0.5 rounded-md cursor-pointer hover:bg-primary/10 transition-colors border border-dashed border-primary/20 hover:border-primary/40 bg-primary/5 hover:bg-primary/10"
+                              onClick={() => {
+                                setEditingMatchForDateTime(match.id)
+                                setTempDate(match.date || '')
+                                setTempTime(match.time || '')
+                                setShowDateTimeModal(true)
+                              }}
+                            >
+                              <Clock className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-sm font-medium text-foreground flex-1">
+                                {match.date && match.time
+                                  ? `${new Date(match.date).toLocaleDateString('pt-BR')} às ${match.time}`
+                                  : match.date
+                                    ? `${new Date(match.date).toLocaleDateString('pt-BR')} - Horário não definido`
+                                    : 'Data e horário não definidos'
                                 }
-                                // Caso contrário, inicia a animação
-                                return { ...prev, [currentMatch.id]: 'home' }
-                              })
-                            }}
-                          >
-                            {currentMatch.homeScore ?? 0}
-                          </div>
-                          <span className="text-3xl font-bold text-muted-foreground">×</span>
-                          <div 
-                            className="text-4xl font-bold text-foreground w-12 text-center tabular-nums relative cursor-pointer hover:opacity-70 transition-opacity"
-                            onClick={() => {
-                              setShowScoreHint(prev => {
-                                // Se já está ativo, para a animação
-                                if (prev[currentMatch.id] === 'away') {
-                                  const next = { ...prev }
-                                  delete next[currentMatch.id]
-                                  return next
-                                }
-                                // Caso contrário, inicia a animação
-                                return { ...prev, [currentMatch.id]: 'away' }
-                              })
-                            }}
-                          >
-                            {currentMatch.awayScore ?? 0}
+                              </span>
+                              <Pencil className="h-3 w-3 text-primary/70" />
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full relative z-30 px-2">
+                              <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
+                                <span className="text-xs font-medium text-muted-foreground">Casa</span>
+                                <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="xl" className="h-20 w-20" noCircle />
+                                <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(match.homeTeam)}</span>
+                              </div>
+
+                              <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
+                                <div className="flex items-center gap-2">
+                                  <div className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'}`}>
+                                    {match.homeScore ?? 0}
+                                  </div>
+                                  <span className="text-3xl font-bold text-muted-foreground">×</span>
+                                  <div className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'}`}>
+                                    {match.awayScore ?? 0}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
+                                <span className="text-xs font-medium text-muted-foreground">Visitante</span>
+                                <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="xl" className="h-20 w-20" noCircle />
+                                <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(match.awayTeam)}</span>
+                              </div>
+                            </div>
+
+                            {/* Status do Jogo - Botões compactos */}
+                            <div className="mt-3 w-full" data-no-drag>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleStatusUpdate(match.id, 'scheduled')}
+                                  disabled={savingStatus[match.id]}
+                                  className={cn(
+                                    'flex-1 px-1.5 py-1 rounded text-xs font-medium transition-all',
+                                    'border',
+                                    match.status === 'scheduled'
+                                      ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                                      : 'bg-transparent border-border hover:border-primary/50 hover:bg-primary/10'
+                                  )}
+                                >
+                                  Agendado
+                                </button>
+                                <button
+                                  onClick={() => handleStatusUpdate(match.id, 'live')}
+                                  disabled={savingStatus[match.id]}
+                                  className={cn(
+                                    'flex-1 px-1.5 py-1 rounded text-xs font-medium transition-all',
+                                    'border',
+                                    match.status === 'live'
+                                      ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                                      : 'bg-transparent border-border hover:border-primary/50 hover:bg-primary/10'
+                                  )}
+                                >
+                                  Ao Vivo
+                                </button>
+                                <button
+                                  onClick={() => handleStatusUpdate(match.id, 'finished')}
+                                  disabled={savingStatus[match.id]}
+                                  className={cn(
+                                    'flex-1 px-1.5 py-1 rounded text-xs font-medium transition-all',
+                                    'border',
+                                    match.status === 'finished'
+                                      ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                                      : 'bg-transparent border-border hover:border-primary/50 hover:bg-primary/10'
+                                  )}
+                                >
+                                  Finalizado
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
-                        <span className="text-xs font-medium text-muted-foreground">Visitante</span>
-                        <TeamLogo teamName={currentMatch.awayTeam} logo={currentMatch.awayTeamLogo} size="xl" className="h-20 w-20" noCircle />
-                        <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(currentMatch.awayTeam)}</span>
-                      </div>
-                    </div>
-                  </div>
+                      )
+                    })}
+                  </motion.div>
                 </div>
 
-                {/* Status - Botões compactos */}
-                <div>
-                  <div className="text-xs font-semibold mb-1.5 text-muted-foreground">Status do Jogo</div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => handleStatusUpdate(currentMatch.id, 'scheduled')}
-                      disabled={savingStatus[currentMatch.id]}
-                      className={cn(
-                        'flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all',
-                        'border-2',
-                        currentMatch.status === 'scheduled'
-                          ? 'bg-primary text-primary-foreground border-primary font-semibold'
-                          : 'bg-transparent border-border hover:border-primary/50 hover:bg-primary/10'
-                      )}
-                    >
-                      Agendado
-                    </button>
-                    <button
-                      onClick={() => handleStatusUpdate(currentMatch.id, 'live')}
-                      disabled={savingStatus[currentMatch.id]}
-                      className={cn(
-                        'flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all',
-                        'border-2',
-                        currentMatch.status === 'live'
-                          ? 'bg-primary text-primary-foreground border-primary font-semibold'
-                          : 'bg-transparent border-border hover:border-primary/50 hover:bg-primary/10'
-                      )}
-                    >
-                      Em Andamento
-                    </button>
-                    <button
-                      onClick={() => handleStatusUpdate(currentMatch.id, 'finished')}
-                      disabled={savingStatus[currentMatch.id]}
-                      className={cn(
-                        'flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all',
-                        'border-2',
-                        currentMatch.status === 'finished'
-                          ? 'bg-primary text-primary-foreground border-primary font-semibold'
-                          : 'bg-transparent border-border hover:border-primary/50 hover:bg-primary/10'
-                      )}
-                    >
-                      Finalizado
-                    </button>
+                {/* Barra de progresso */}
+                <div className="w-full px-4 pt-2 pb-2 border-t border-border/30">
+                  <div className="w-full h-1 bg-secondary rounded-full overflow-hidden mb-2">
+                    <motion.div
+                      className="h-full bg-primary rounded-full"
+                      initial={{ width: '0%' }}
+                      animate={{
+                        width: updateGamesMatches.length > 0
+                          ? updateGamesMatches.length === 1
+                            ? '100%'
+                            : currentMatchIndex === 0
+                              ? '0%'
+                              : currentMatchIndex === updateGamesMatches.length - 1
+                                ? '100%'
+                                : `${(currentMatchIndex / (updateGamesMatches.length - 1)) * 100}%`
+                          : '0%'
+                      }}
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                    />
                   </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {updateGamesMatches.length > 0 ? `Jogo ${currentMatchIndex + 1} de ${updateGamesMatches.length}` : ''}
+                  </p>
                 </div>
               </Card>
+            )}
+
+            {/* Espaço consistente entre carrossel e navegação */}
+            <div className="h-1"></div>
+
+            {/* Navegação do Carrossel */}
+            {updateGamesMatches.length > 1 && (
+              <div className="flex items-center justify-between gap-4 relative z-30">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleCarouselNavigation('prev')}
+                  disabled={currentMatchIndex === 0}
+                  className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  <span className="text-sm">Anterior</span>
+                </Button>
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => handleCarouselNavigation('next')}
+                  disabled={currentMatchIndex === updateGamesMatches.length - 1}
+                  className="flex-1"
+                >
+                  <span className="text-sm">Próximo</span>
+                  <ChevronRight className="h-5 w-5 ml-1" />
+                </Button>
+              </div>
+            )}
+
+            {/* Espaço consistente entre navegação e controles */}
+            <div className="h-1"></div>
+
+            <div className="space-y-2">
 
               {/* Card de seleção de placar - isolado, estilo Games.tsx */}
               <Card className="p-0 relative overflow-hidden">
-                <div className="px-4 pt-3 pb-2 border-b border-border/30">
-                  <div className="flex items-center justify-center">
-                    <span className="text-base font-semibold text-foreground">
-                      Atualizar Placar
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center gap-2 w-full p-4 overflow-x-auto" style={{ touchAction: 'none' }}>
+                <div className="flex items-center justify-center gap-2 w-full p-3 overflow-x-auto" style={{ touchAction: 'none' }}>
                   {/* Controles Casa */}
                   <div className="flex-1 flex flex-col items-center gap-3 min-w-0">
                     <span className="text-xs font-medium text-muted-foreground">Casa</span>
@@ -2011,6 +2144,74 @@ export default function Admin() {
             </Card>
           </>
         )}
+
+        {/* Modal de edição de data e hora */}
+        <AnimatePresence>
+          {showDateTimeModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowDateTimeModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-background border border-border rounded-lg p-6 max-w-sm w-full"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-primary/20 rounded-full">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold">Editar Data e Hora</h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Data</label>
+                    <Input
+                      type="date"
+                      value={tempDate}
+                      onChange={(e) => setTempDate(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Hora</label>
+                    <select
+                      value={tempTime}
+                      onChange={(e) => setTempTime(e.target.value)}
+                      className="w-full h-10 text-sm px-3 rounded border border-border bg-background"
+                    >
+                      <option value="">Selecione</option>
+                      {config.getGameTimesSync().map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDateTimeModal(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveDateTime}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Modais de confirmação */}
         <AnimatePresence>
