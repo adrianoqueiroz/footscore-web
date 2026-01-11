@@ -1,0 +1,96 @@
+name: Build and deploy frontend to Azure Storage Account
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'tailwind.config.js'
+      - 'tsconfig.json'
+      - 'env.production'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Copy production env file
+        run: |
+          cp env.production .env
+          echo "✅ Arquivo .env criado a partir de env.production"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ Erro: Pasta dist não foi criada"
+            exit 1
+          fi
+          echo "✅ Build concluído com sucesso"
+          ls -la dist/
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Delete existing files in $web container
+        run: |
+          echo "🗑️ Limpando arquivos antigos do container \$web..."
+          az storage blob delete-batch \
+            --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }} \
+            --source '$web' \
+            --pattern '*' \
+            --auth-mode login \
+            --only-show-errors || echo "⚠️ Container vazio ou erro ao limpar (continuando...)"
+
+      - name: Upload files to Azure Storage Account
+        run: |
+          echo "📤 Fazendo upload dos arquivos para o Azure Storage Account..."
+          az storage blob upload-batch \
+            --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }} \
+            --source dist \
+            --destination '$web' \
+            --auth-mode login \
+            --overwrite \
+            --destination-path '' \
+            --output table
+          
+          echo "✅ Upload concluído com sucesso!"
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verificando arquivos no container \$web..."
+          az storage blob list \
+            --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }} \
+            --container-name '$web' \
+            --auth-mode login \
+            --query '[].name' \
+            --output table

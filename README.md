@@ -109,41 +109,67 @@ npm run dev
 
 O app estará disponível em `http://localhost:5173`
 
-## 🚀 Deploy no Azure Static Web Apps
+## 🚀 Deploy Automatizado via GitHub Actions
 
-### Passos para Deploy:
+O projeto está configurado para fazer deploy automático no Azure Storage Account sempre que houver push na branch `main`.
+
+### Configuração Inicial (Uma vez apenas)
+
+1. **Criar Service Principal no Azure:**
+   - Azure Portal → Azure Active Directory → App registrations → New registration
+   - Nome: `github-actions-frontend-storage`
+   - Criar Client Secret em Certificates & secrets
+   - Adicionar role **Storage Blob Data Contributor** no Storage Account (Access Control → IAM)
+
+2. **Configurar Secrets no GitHub:**
+   - Acesse: `Settings` → `Secrets and variables` → `Actions`
+   - Adicione os seguintes secrets:
+     - `AZURE_CLIENT_ID` - Application (client) ID da Service Principal
+     - `AZURE_TENANT_ID` - Tenant ID do Azure
+     - `AZURE_SUBSCRIPTION_ID` - Subscription ID do Azure
+     - `AZURE_STORAGE_ACCOUNT_NAME` - Nome do Storage Account
+
+3. **Verificar Container $web:**
+   - Deve existir no Storage Account com acesso público habilitado (Blob)
+
+### O que o workflow faz automaticamente:
+
+- ✅ Copia `env.production` para `.env`
+- ✅ Instala dependências (`npm ci`)
+- ✅ Faz build da aplicação (`npm run build`)
+- ✅ Limpa arquivos antigos do container `$web`
+- ✅ Faz upload dos arquivos da pasta `dist/` para o Azure Storage Account
+
+### Deploy Manual (se necessário)
+
+Se precisar fazer deploy manual:
 
 1. **Fazer build da aplicação:**
 ```bash
-npm run deploy
-# ou
+cp env.production .env
 npm run build
 ```
 
-2. **Fazer upload da pasta `dist/` para o Azure Static Web Apps:**
+2. **Fazer upload da pasta `dist/` para o Azure Storage Account:**
    - Acesse o portal do Azure
-   - Vá para seu Static Web App
-   - Clique em "Deployments"
+   - Vá para seu Storage Account
+   - Clique em "Data storage" → "Containers" → `$web`
+   - Delete todos os arquivos antigos
    - Faça upload de todos os arquivos da pasta `dist/`
-   - **IMPORTANTE:** Certifique-se de incluir o arquivo `staticwebapp.config.json`
 
 3. **Arquivos que devem ser enviados:**
    - `dist/index.html`
    - `dist/manifest.json`
    - `dist/sw.js`
-   - `dist/staticwebapp.config.json`
    - `dist/assets/*` (todos os arquivos)
    - `dist/teams/*` (imagens dos times)
 
-4. **Limpar cache do navegador após deploy:**
-   - Pressione `Ctrl+Shift+R` (Windows/Linux) ou `Cmd+Shift+R` (Mac)
-   - Ou abra em modo anônimo
-
 ### Problemas Comuns:
 
-- **Página inicial não carrega:** Deploy não foi feito corretamente ou `staticwebapp.config.json` não foi incluído
+- **Página inicial não carrega:** Deploy não foi feito corretamente
 - **Arquivos 404:** Versão antiga ainda está no cache do Azure ou navegador
 - **Rotas não funcionam:** Service Worker está interceptando rotas SPA
+- **Workflow falha:** Verifique se todos os secrets estão configurados corretamente
 
 ## 🏗️ Estrutura do Projeto
 
