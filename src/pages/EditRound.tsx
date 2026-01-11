@@ -144,6 +144,8 @@ export default function EditRound() {
   const [customTimeMatches, setCustomTimeMatches] = useState<Set<string>>(new Set())
   const isInitialLoadRef = useRef(true)
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
+  const [globalDate, setGlobalDate] = useState<string>('')
+  const [globalTime, setGlobalTime] = useState<string>('')
   const [savingScore, setSavingScore] = useState<Record<string, boolean>>({})
   const [showScoreHint, setShowScoreHint] = useState<Record<string, 'home' | 'away' | null>>({}) // Para mostrar indicativo visual
   const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
@@ -337,7 +339,14 @@ export default function EditRound() {
       
       setAllowsNewBets(allows)
       setIsActive(active !== undefined ? active : true) // Default true se não existir
-      
+
+      // Definir data/hora global baseada no primeiro jogo da rodada
+      if (data.length > 0) {
+        const firstMatch = data[0]
+        setGlobalDate(firstMatch.date || '')
+        setGlobalTime(firstMatch.time || '')
+      }
+
       // Marcar como carregamento inicial completo
       isInitialLoadRef.current = false
     } catch (error) {
@@ -430,19 +439,25 @@ export default function EditRound() {
     const currentMatch = matches.find(m => m.id === matchId)
     if (!currentMatch) return
 
-    // Verificar se está mudando de "live" (em andamento) para "scheduled" (agendado) e se o placar não é 0x0
-    if (currentMatch.status === 'live' && newStatus === 'scheduled') {
+    // Verificar se está mudando para "scheduled" (agendado) e se o placar não é 0x0
+    if (newStatus === 'scheduled') {
       const homeScore = currentMatch.homeScore ?? 0
       const awayScore = currentMatch.awayScore ?? 0
-      
+
       if (homeScore !== 0 || awayScore !== 0) {
+        const statusText = {
+          'scheduled': 'Agendado',
+          'live': 'Em Andamento',
+          'finished': 'Finalizado'
+        }[currentMatch.status] || currentMatch.status
+
         const confirmed = await confirm.confirm({
           title: 'Zerar Placar',
-          message: `O placar atual é ${homeScore} × ${awayScore}. Ao alterar o status de "Em Andamento" para "Agendado", o placar será zerado para 0 × 0. Deseja continuar?`,
+          message: `O placar atual é ${homeScore} × ${awayScore}. Ao alterar o status de "${statusText}" para "Agendado", o placar será zerado para 0 × 0. Deseja continuar?`,
           variant: 'warning',
           confirmText: 'Sim',
         })
-        
+
         if (!confirmed) {
           return
         }
@@ -452,22 +467,22 @@ export default function EditRound() {
     setSavingStatus(prev => ({ ...prev, [matchId]: true }))
     try {
       const payload: Partial<Match> = { status: newStatus }
-      
-      // Se está mudando de "live" para "scheduled" e o placar não é 0x0, zerar o placar
-      if (currentMatch.status === 'live' && newStatus === 'scheduled') {
+
+      // Se está mudando para "scheduled" e o placar não é 0x0, zerar o placar
+      if (newStatus === 'scheduled') {
         const homeScore = currentMatch.homeScore ?? 0
         const awayScore = currentMatch.awayScore ?? 0
-        
+
         if (homeScore !== 0 || awayScore !== 0) {
           payload.homeScore = 0
           payload.awayScore = 0
         }
       }
-      
+
       const updatedMatch = await matchService.updateMatch(matchId, payload)
       // Update local matches with updatedMatch
       setMatches(prev => prev.map(m => (m.id === updatedMatch.id ? { ...m, ...updatedMatch } : m)))
-      
+
       toast.success('Status atualizado com sucesso')
     } catch (error) {
       console.error('Error saving status:', error)
@@ -736,8 +751,8 @@ export default function EditRound() {
 
           return {
             id: m.id,
-            date: m.date,
-            time: m.time,
+            date: globalDate || m.date, // Usar data global se definida, senão manter a atual
+            time: globalTime || m.time, // Usar hora global se definida, senão manter a atual
             includeInRound, // Sempre boolean explícito
             homeTeam: m.homeTeam, // Incluir times para permitir edição
             awayTeam: m.awayTeam,
@@ -852,6 +867,85 @@ export default function EditRound() {
                 onCheckedChange={handleToggleIsActive}
                 disabled={savingIsActive}
               />
+            </div>
+          </div>
+        </Card>
+
+        {/* Data e Hora do Jogo Atual */}
+        {matches.length > 0 && (
+          <Card className="p-4 lg:p-5 bg-primary/5 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm lg:text-base mb-1">Jogo Atual</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <TeamLogo teamName={matches[currentMatchIndex]?.homeTeam} logo={matches[currentMatchIndex]?.homeTeamLogo} size="sm" className="h-6 w-6 lg:h-7 lg:w-7" noCircle />
+                    <span className="text-sm font-medium">{getTeamDisplayName(matches[currentMatchIndex]?.homeTeam)}</span>
+                  </div>
+                  <span className="text-muted-foreground">×</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{getTeamDisplayName(matches[currentMatchIndex]?.awayTeam)}</span>
+                    <TeamLogo teamName={matches[currentMatchIndex]?.awayTeam} logo={matches[currentMatchIndex]?.awayTeamLogo} size="sm" className="h-6 w-6 lg:h-7 lg:w-7" noCircle />
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground mb-1">Data e Hora</div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {matches[currentMatchIndex]?.date ? new Date(matches[currentMatchIndex].date).toLocaleDateString('pt-BR') : '--/--/----'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {matches[currentMatchIndex]?.time || '--:--'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Configuração global de data e hora da rodada */}
+        <Card className="p-4 lg:p-5">
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-semibold text-sm lg:text-base mb-1">Data e Hora da Rodada</h3>
+              <p className="text-xs lg:text-sm text-muted-foreground">
+                Estes valores serão aplicados a todos os jogos da rodada quando salvar.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              {/* Input de Data */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Data</label>
+                <div className="relative flex items-center">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground pointer-events-none z-10" />
+                  <Input
+                    type="date"
+                    value={globalDate}
+                    onChange={(e) => setGlobalDate(e.target.value)}
+                    className="h-10 lg:h-11 text-sm lg:text-base pl-10 lg:pl-12 pr-3 w-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-datetime-edit]:text-sm lg:[&::-webkit-datetime-edit]:text-base [&::-webkit-datetime-edit]:h-full [&::-webkit-datetime-edit]:flex [&::-webkit-datetime-edit]:items-center [&::-webkit-datetime-edit-fields-wrapper]:text-sm lg:[&::-webkit-datetime-edit-fields-wrapper]:text-base [&::-webkit-datetime-edit-fields-wrapper]:h-full [&::-webkit-datetime-edit-fields-wrapper]:flex [&::-webkit-datetime-edit-fields-wrapper]:items-center [&::-webkit-datetime-edit-text]:text-sm lg:[&::-webkit-datetime-edit-text]:text-base [&::-webkit-datetime-edit-month-field]:text-sm lg:[&::-webkit-datetime-edit-month-field]:text-base [&::-webkit-datetime-edit-day-field]:text-sm lg:[&::-webkit-datetime-edit-day-field]:text-base [&::-webkit-datetime-edit-year-field]:text-sm lg:[&::-webkit-datetime-edit-year-field]:text-base"
+                  />
+                </div>
+              </div>
+
+              {/* Input de Hora */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Hora</label>
+                <div className="relative flex items-center">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground pointer-events-none z-10" />
+                  <Input
+                    type="time"
+                    value={globalTime}
+                    onChange={(e) => setGlobalTime(e.target.value)}
+                    className="h-10 lg:h-11 text-sm lg:text-base pl-10 lg:pl-12 pr-3 w-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-datetime-edit]:text-sm lg:[&::-webkit-datetime-edit]:text-base [&::-webkit-datetime-edit]:h-full [&::-webkit-datetime-edit]:flex [&::-webkit-datetime-edit]:items-center [&::-webkit-datetime-edit-fields-wrapper]:text-sm lg:[&::-webkit-datetime-edit-fields-wrapper]:text-base [&::-webkit-datetime-edit-fields-wrapper]:h-full [&::-webkit-datetime-edit-fields-wrapper]:flex [&::-webkit-datetime-edit-fields-wrapper]:items-center"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </Card>
@@ -983,61 +1077,6 @@ export default function EditRound() {
                     </div>
                   </div>
 
-                  {/* Linha 2: Data e Hora - dois inputs lado a lado, mesmo tamanho */}
-                  <div className="grid grid-cols-2 gap-2 lg:gap-3">
-                    <div className="relative flex items-center">
-                      <Calendar className="absolute left-2.5 lg:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground pointer-events-none z-10" />
-                      <Input
-                        type="date"
-                        value={match.date}
-                        onChange={e => handleMatchChange(match.id, 'date', e.target.value)}
-                        className="h-8 lg:h-9 text-xs lg:text-sm pl-9 lg:pl-10 pr-2 w-full max-w-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-datetime-edit]:text-xs lg:[&::-webkit-datetime-edit]:text-sm [&::-webkit-datetime-edit]:h-full [&::-webkit-datetime-edit]:flex [&::-webkit-datetime-edit]:items-center [&::-webkit-datetime-edit-fields-wrapper]:text-xs lg:[&::-webkit-datetime-edit-fields-wrapper]:text-sm [&::-webkit-datetime-edit-fields-wrapper]:h-full [&::-webkit-datetime-edit-fields-wrapper]:flex [&::-webkit-datetime-edit-fields-wrapper]:items-center [&::-webkit-datetime-edit-text]:text-xs lg:[&::-webkit-datetime-edit-text]:text-sm [&::-webkit-datetime-edit-month-field]:text-xs lg:[&::-webkit-datetime-edit-month-field]:text-sm [&::-webkit-datetime-edit-day-field]:text-xs lg:[&::-webkit-datetime-edit-day-field]:text-sm [&::-webkit-datetime-edit-year-field]:text-xs lg:[&::-webkit-datetime-edit-year-field]:text-sm"
-                        style={{ minWidth: 0, maxWidth: '100%', width: '100%', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div className="relative flex items-center">
-                      <Clock className="absolute left-2.5 lg:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground pointer-events-none z-10" />
-                      {(() => {
-                        const predefinedTimes = config.getGameTimesSync().map(t => t.trim())
-                        const matchTime = match.time ? match.time.trim() : ''
-                        const timeWithoutSeconds = matchTime ? matchTime.split(':').slice(0, 2).join(':') : ''
-                        const isInPredefined = matchTime && (predefinedTimes.includes(matchTime) || predefinedTimes.includes(timeWithoutSeconds))
-                        const isCustom = customTimeMatches.has(match.id)
-                        // Mostra seletor se: não tem horário OU (tem horário E está na lista pré-definida E não está marcado como custom)
-                        // Se está na lista pré-definida, sempre prioriza mostrar seletor
-                        return !matchTime || (isInPredefined && !isCustom)
-                      })() ? (
-                        <select
-                          value={match.time || ''}
-                          onChange={(e) => {
-                            const newTime = e.target.value
-                            handleMatchChange(match.id, 'time', newTime)
-                            // Atualizar customTimeMatches
-                            setCustomTimeMatches(prev => {
-                              const next = new Set(prev)
-                              next.delete(match.id)
-                              return next
-                            })
-                          }}
-                          className="w-full h-8 lg:h-9 text-xs lg:text-sm pl-9 lg:pl-10 pr-2 rounded border border-border bg-background"
-                          style={{ boxSizing: 'border-box' }}
-                        >
-                          <option value="">Selecione</option>
-                          {config.getGameTimesSync().map(time => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Input
-                          type="time"
-                          value={match.time}
-                          onChange={e => handleMatchChange(match.id, 'time', e.target.value)}
-                          className="h-8 lg:h-9 text-xs lg:text-sm pl-9 lg:pl-10 pr-2 w-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-datetime-edit]:text-xs lg:[&::-webkit-datetime-edit]:text-sm [&::-webkit-datetime-edit]:h-full [&::-webkit-datetime-edit]:flex [&::-webkit-datetime-edit]:items-center [&::-webkit-datetime-edit-fields-wrapper]:text-xs lg:[&::-webkit-datetime-edit-fields-wrapper]:text-sm [&::-webkit-datetime-edit-fields-wrapper]:h-full [&::-webkit-datetime-edit-fields-wrapper]:flex [&::-webkit-datetime-edit-fields-wrapper]:items-center"
-                          style={{ boxSizing: 'border-box' }}
-                        />
-                      )}
-                    </div>
-                  </div>
                 </Card>
 
                 {/* Componente de atualizar placar - Card separado, isolado */}
@@ -1881,6 +1920,24 @@ export default function EditRound() {
                   }}
                     className="w-40 lg:w-48"
                   />
+                  <Button
+                    onClick={handleSaveRound}
+                    disabled={saving}
+                    size="sm"
+                    className="h-9 px-3"
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-3.5 w-3.5" />
+                        Salvar Rodada
+                      </>
+                    )}
+                  </Button>
                 </>
               ) : (
                 <div className="w-40 lg:w-48 h-10 bg-secondary/50 rounded-md animate-pulse" />

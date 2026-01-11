@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { LogOut, User, Bell, BellOff } from 'lucide-react'
 import { authService } from '@/services/auth.service'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { useAvatarCache } from '@/hooks/useAvatarCache'
 
 interface UserMenuProps {
   userName: string
@@ -13,9 +14,10 @@ interface UserMenuProps {
 
 export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [avatarError, setAvatarError] = useState(false)
-  const [currentAvatar, setCurrentAvatar] = useState<string | null | undefined>(userAvatar)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Usar hook de cache para avatar
+  const { avatarUrl: cachedAvatar, isLoading: avatarLoading, error: avatarError, refresh: refreshAvatar } = useAvatarCache(userAvatar)
 
   // Push notifications
   const { subscribe: subscribePush, unsubscribe: unsubscribePush, isSubscribed: isPushSubscribed, isSupported: pushSupported, permission: pushPermission } = usePushNotifications()
@@ -28,24 +30,16 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
     .map(part => part.charAt(0).toUpperCase())
     .join('')
 
-  // Resetar erro quando avatar mudar
-  useEffect(() => {
-    setAvatarError(false)
-    setCurrentAvatar(userAvatar)
-  }, [userAvatar])
-
   // Tentar atualizar avatar do servidor quando der erro
   const handleAvatarError = async () => {
     console.warn('[UserMenu] Erro ao carregar avatar, tentando atualizar do servidor')
-    setAvatarError(true)
-    
+
     // Tentar buscar dados atualizados do servidor
     try {
       const updatedUser = await authService.refreshUser()
-      if (updatedUser?.avatar && updatedUser.avatar !== currentAvatar) {
+      if (updatedUser?.avatar && updatedUser.avatar !== userAvatar) {
         console.log('[UserMenu] Avatar atualizado do servidor')
-        setCurrentAvatar(updatedUser.avatar)
-        setAvatarError(false)
+        // O hook será atualizado automaticamente quando userAvatar mudar
       }
     } catch (error) {
       console.error('[UserMenu] Erro ao atualizar avatar do servidor:', error)
@@ -84,16 +78,16 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         className={`relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all overflow-hidden ${
-          currentAvatar && !avatarError
-            ? 'border-2 border-primary shadow-sm hover:border-primary/90' 
+          cachedAvatar && !avatarError
+            ? 'border-2 border-primary shadow-sm hover:border-primary/90'
             : 'bg-gradient-to-br from-primary/30 to-primary/20 text-primary hover:from-primary/40 hover:to-primary/30'
         }`}
         whileTap={{ scale: 0.95 }}
       >
-        {currentAvatar && !avatarError ? (
+        {cachedAvatar && !avatarError ? (
           <>
-            <img 
-              src={currentAvatar} 
+            <img
+              src={cachedAvatar}
               alt={userName}
               className="h-full w-full object-cover rounded-full"
               onError={handleAvatarError}

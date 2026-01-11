@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
+import './mobile.css'
 
 // Registrar service worker para PWA
 if ('serviceWorker' in navigator) {

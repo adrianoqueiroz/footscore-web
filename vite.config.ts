@@ -27,6 +27,8 @@ export default defineConfig({
       }
     }
   },
+  // Configuração para SPA - redirecionar todas as rotas para index.html
+  appType: 'spa',
   publicDir: 'public'
 })
 

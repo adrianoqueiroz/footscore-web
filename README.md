@@ -109,6 +109,42 @@ npm run dev
 
 O app estará disponível em `http://localhost:5173`
 
+## 🚀 Deploy no Azure Static Web Apps
+
+### Passos para Deploy:
+
+1. **Fazer build da aplicação:**
+```bash
+npm run deploy
+# ou
+npm run build
+```
+
+2. **Fazer upload da pasta `dist/` para o Azure Static Web Apps:**
+   - Acesse o portal do Azure
+   - Vá para seu Static Web App
+   - Clique em "Deployments"
+   - Faça upload de todos os arquivos da pasta `dist/`
+   - **IMPORTANTE:** Certifique-se de incluir o arquivo `staticwebapp.config.json`
+
+3. **Arquivos que devem ser enviados:**
+   - `dist/index.html`
+   - `dist/manifest.json`
+   - `dist/sw.js`
+   - `dist/staticwebapp.config.json`
+   - `dist/assets/*` (todos os arquivos)
+   - `dist/teams/*` (imagens dos times)
+
+4. **Limpar cache do navegador após deploy:**
+   - Pressione `Ctrl+Shift+R` (Windows/Linux) ou `Cmd+Shift+R` (Mac)
+   - Ou abra em modo anônimo
+
+### Problemas Comuns:
+
+- **Página inicial não carrega:** Deploy não foi feito corretamente ou `staticwebapp.config.json` não foi incluído
+- **Arquivos 404:** Versão antiga ainda está no cache do Azure ou navegador
+- **Rotas não funcionam:** Service Worker está interceptando rotas SPA
+
 ## 🏗️ Estrutura do Projeto
 
 ```

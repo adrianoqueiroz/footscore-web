@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card'
 import { authService } from '@/services/auth.service'
 import { useToastContext } from '@/contexts/ToastContext'
 import { useMatchEvents } from '@/hooks/useMatchEvents'
+import { useAvatarCache } from '@/hooks/useAvatarCache'
 import PulsingBall from '@/components/ui/PulsingBall'
 import ContentWrapper from '@/components/ui/ContentWrapper'
 
@@ -15,6 +16,10 @@ export default function Profile() {
   const navigate = useNavigate()
   const toast = useToastContext()
   const user = authService.getCurrentUser()
+
+  // Usar cache de avatar
+  const { avatarUrl: cachedAvatar, isLoading: avatarLoading } = useAvatarCache(user?.avatar)
+
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
@@ -145,11 +150,11 @@ export default function Profile() {
         {/* Avatar/Foto do Usuário */}
         <div className="flex justify-center mb-6">
           <div className="relative">
-            {user.avatar ? (
+            {cachedAvatar ? (
               <div className="relative h-24 w-24 rounded-full border-2 border-primary shadow-lg p-0.5 bg-background">
                 <div className="h-full w-full rounded-full overflow-hidden">
-                  <img 
-                    src={user.avatar} 
+                  <img
+                    src={cachedAvatar}
                     alt={user.name}
                     className="h-full w-full object-cover"
                   />

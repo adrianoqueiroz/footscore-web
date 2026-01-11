@@ -1,5 +1,5 @@
 // Service Worker básico para PWA com Push Notifications
-const CACHE_NAME = 'footscore-v1'
+const CACHE_NAME = 'footscore-v1.0.1'
 const urlsToCache = [
   '/',
   '/index.html',
@@ -34,25 +34,33 @@ self.addEventListener('activate', (event) => {
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
-  
+
   // Não interceptar requisições SSE (Server-Sent Events)
   // EventSource requer conexão persistente que o Service Worker não pode manter
-  const isSSERequest = url.pathname.includes('/api/matches/events') || 
+  const isSSERequest = url.pathname.includes('/api/matches/events') ||
                        url.pathname.includes('/events') ||
                        event.request.headers.get('Accept') === 'text/event-stream' ||
                        event.request.headers.get('Accept')?.includes('text/event-stream')
-  
+
   if (isSSERequest) {
     // Deixar passar direto para a rede, sem interceptação
     // Não chamar event.respondWith() permite que a requisição passe direto
     return
   }
-  
+
   // Não interceptar requisições para a API (deixar passar direto)
   if (url.pathname.startsWith('/api/')) {
     return
   }
-  
+
+  // Não interceptar rotas do React Router (SPA routes)
+  // Qualquer rota que não seja arquivo com extensão é provavelmente uma rota do React
+  const hasExtension = url.pathname.includes('.')
+  if (!hasExtension && url.pathname !== '/' && url.pathname !== '/index.html') {
+    // Deixar o navegador/servidor lidar com rotas SPA
+    return
+  }
+
   // Apenas interceptar requisições GET para recursos estáticos
   if (event.request.method === 'GET') {
     event.respondWith(

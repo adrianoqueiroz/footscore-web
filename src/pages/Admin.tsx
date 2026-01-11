@@ -32,40 +32,37 @@ function SortableItem({ id, children, isReordering }: { id: string; children: Re
     transform,
     transition,
     isDragging,
-  } = useSortable({ id })
+  } = useSortable({ 
+    id,
+    disabled: !isReordering, // Desabilitar drag quando não está em modo de reordenação
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition, // Remover transição durante drag para melhor feedback visual
     opacity: isDragging ? 0.5 : 1,
-    // Melhorar performance no mobile
-    touchAction: 'auto',
+    zIndex: isDragging ? 9999 : 'auto',
+    position: 'relative' as const,
+    touchAction: isReordering ? 'none' : 'auto', // Prevenir gestos de touch durante drag
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative ${isReordering ? 'select-none' : ''}`}
+      className={`relative ${isReordering ? 'select-none cursor-grab active:cursor-grabbing' : ''}`}
+      {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
-      {/* Área de drag específica - só aparece quando reordenando */}
+      {/* Ícone de grip visual - só aparece quando reordenando */}
       {isReordering && (
         <div
-          className="absolute left-0 top-0 bottom-0 w-12 z-20 cursor-grab active:cursor-grabbing touch-none"
-          {...attributes}
-          {...listeners}
-          onTouchStart={(e: React.TouchEvent) => {
-            // Prevenir scroll padrão durante drag
-            e.preventDefault()
-          }}
+          className="absolute left-0 top-0 bottom-0 w-10 z-10 flex items-center justify-center pointer-events-none"
         >
-          <div className="flex items-center justify-center h-full">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
         </div>
       )}
 
-      <div className={`relative ${isReordering ? 'pl-12' : ''}`}>
+      <div className={`relative ${isReordering ? 'pl-10' : ''}`}>
         {children}
       </div>
     </div>
@@ -151,6 +148,11 @@ export default function Admin() {
   const [editingMatchForDateTime, setEditingMatchForDateTime] = useState<string | null>(null)
   const [tempDate, setTempDate] = useState('')
   const [tempTime, setTempTime] = useState('')
+
+  // Debug do estado do modal
+  useEffect(() => {
+    console.log('🔍 Estado do modal showDateTimeModal:', showDateTimeModal)
+  }, [showDateTimeModal])
   const [roundsSelectorInitialized, setRoundsSelectorInitialized] = useState(false) // Indica se já carregou as rodadas pelo menos uma vez
   const [allowsNewBets, setAllowsNewBets] = useState(true)
   const [isActive, setIsActive] = useState(true)
@@ -159,6 +161,7 @@ export default function Admin() {
   const [isReordering, setIsReordering] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
   const [reorderKey, setReorderKey] = useState(0) // Força re-renderização quando muda
+  const [isTwoColumns, setIsTwoColumns] = useState(window.innerWidth >= 1024) // Detecta layout de 2 colunas
   const [customTimeMatches, setCustomTimeMatches] = useState<Set<string>>(new Set())
   const [showDeleteRoundModal, setShowDeleteRoundModal] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
@@ -236,6 +239,18 @@ export default function Admin() {
       })
     }
   }, [currentView])
+
+  // Detectar layout de 2 colunas
+  useEffect(() => {
+    const handleResize = () => {
+      setIsTwoColumns(window.innerWidth >= 1024)
+    }
+    
+    handleResize() // Verificar no mount
+    window.addEventListener('resize', handleResize)
+    
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (currentView !== 'menu' && currentView !== 'create-round' && currentView !== 'settings' && currentView !== 'manage-users' && currentView !== 'update-games') {
@@ -424,15 +439,21 @@ export default function Admin() {
     
     if (!currentMatch) return
 
-    // Verificar se está mudando de "live" (em andamento) para "scheduled" (agendado) e se o placar não é 0x0
-    if (currentMatch.status === 'live' && newStatus === 'scheduled') {
+    // Verificar se está mudando para "scheduled" (agendado) e se o placar não é 0x0
+    if (newStatus === 'scheduled') {
       const homeScore = currentMatch.homeScore ?? 0
       const awayScore = currentMatch.awayScore ?? 0
       
       if (homeScore !== 0 || awayScore !== 0) {
+        const statusText = {
+          'scheduled': 'Agendado',
+          'live': 'Em Andamento',
+          'finished': 'Finalizado'
+        }[currentMatch.status] || currentMatch.status
+
         const confirmed = await confirm.confirm({
           title: 'Zerar Placar',
-          message: `O placar atual é ${homeScore} × ${awayScore}. Ao alterar o status de "Em Andamento" para "Agendado", o placar será zerado para 0 × 0. Deseja continuar?`,
+          message: `O placar atual é ${homeScore} × ${awayScore}. Ao alterar o status de "${statusText}" para "Agendado", o placar será zerado para 0 × 0. Deseja continuar?`,
           variant: 'warning',
           confirmText: 'Sim',
         })
@@ -454,8 +475,8 @@ export default function Admin() {
     try {
       const payload: Partial<Match> = { status: newStatus }
       
-      // Se está mudando de "live" para "scheduled" e o placar não é 0x0, zerar o placar
-      if (currentMatch.status === 'live' && newStatus === 'scheduled') {
+      // Se está mudando para "scheduled" e o placar não é 0x0, zerar o placar
+      if (newStatus === 'scheduled') {
         const homeScore = currentMatch.homeScore ?? 0
         const awayScore = currentMatch.awayScore ?? 0
         
@@ -511,13 +532,13 @@ export default function Admin() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Ativar após 8px de movimento (melhor para touch)
+        distance: 5, // Reduzir distância para ativação mais rápida
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150, // Delay menor para resposta mais rápida no mobile
-        tolerance: 5, // Tolerância menor para iniciar drag mais facilmente
+        delay: 100, // Delay menor para resposta mais rápida
+        tolerance: 8, // Tolerância maior para facilitar início do drag
       },
     }),
     useSensor(KeyboardSensor, {
@@ -744,6 +765,50 @@ export default function Admin() {
     }
   }
 
+
+  // Função para gerenciar drag and drop em colunas separadas
+  const handleColumnDragEnd = (event: DragEndEvent, column: 'left' | 'right', leftColumn: Match[], rightColumn: Match[]) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    // Determinar qual coluna foi modificada
+    const currentColumn = column === 'left' ? leftColumn : rightColumn
+    const otherColumn = column === 'left' ? rightColumn : leftColumn
+
+    // Encontrar índices dentro da coluna
+    const oldIndexInColumn = currentColumn.findIndex((match) => match.id === active.id)
+    const newIndexInColumn = currentColumn.findIndex((match) => match.id === over.id)
+
+    if (oldIndexInColumn === -1 || newIndexInColumn === -1) {
+      return
+    }
+
+    // Reordenar apenas dentro da coluna específica
+    const reorderedColumn = arrayMove(currentColumn, oldIndexInColumn, newIndexInColumn)
+
+    // Reconstruir o array completo intercalando as colunas
+    const result: Match[] = []
+    const maxLength = Math.max(reorderedColumn.length, otherColumn.length)
+
+    for (let i = 0; i < maxLength; i++) {
+      if (column === 'left') {
+        if (i < reorderedColumn.length) result.push(reorderedColumn[i])
+        if (i < otherColumn.length) result.push(otherColumn[i])
+      } else {
+        if (i < otherColumn.length) result.push(otherColumn[i])
+        if (i < reorderedColumn.length) result.push(reorderedColumn[i])
+      }
+    }
+
+    setUpdateGamesMatches(result.map((match, index) => ({
+      ...match,
+      order: index + 1
+    })))
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
@@ -754,18 +819,16 @@ export default function Admin() {
     const oldIndex = updateGamesMatches.findIndex((match) => match.id === active.id)
     const newIndex = updateGamesMatches.findIndex((match) => match.id === over.id)
 
-    if (oldIndex !== -1 && newIndex !== -1) {
-      // Reordenar array localmente apenas (não salva automaticamente)
-      const reorderedMatches = arrayMove(updateGamesMatches, oldIndex, newIndex)
-
-      // Atualizar ordens sequenciais (1, 2, 3, ...)
-      const updatedMatches = reorderedMatches.map((match, index) => ({
-        ...match,
-        order: index + 1
-      }))
-
-      setUpdateGamesMatches(updatedMatches)
+    if (oldIndex === -1 || newIndex === -1) {
+      return
     }
+
+    // Para layout de 1 coluna, usar comportamento padrão
+    const reorderedMatches = arrayMove(updateGamesMatches, oldIndex, newIndex)
+    setUpdateGamesMatches(reorderedMatches.map((match, index) => ({
+      ...match,
+      order: index + 1
+    })))
   }
 
   const saveNewOrder = async (matchesWithNewOrder: Match[]) => {
@@ -1215,16 +1278,50 @@ export default function Admin() {
                     />
                   </div>
                 </div>
+
               </div>
             </div>
 
             {/* Carrossel de Jogos */}
             {updateGamesMatches.length > 0 && (
               <Card className="p-0 relative overflow-hidden">
+                {/* Header com Data e Hora */}
+                {updateGamesMatches[currentMatchIndex] && (
+                  <div className="px-4 pt-2 pb-1 border-b border-border/30">
+                    <div className="flex justify-center">
+                      <div
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-primary/10 transition-all border border-dashed border-primary/30 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 group"
+                        onClick={() => {
+                          console.log('🎯 Clicando para editar data/hora do jogo:', updateGamesMatches[currentMatchIndex].id)
+                          console.log('📅 Data atual:', updateGamesMatches[currentMatchIndex].date)
+                          console.log('⏰ Hora atual:', updateGamesMatches[currentMatchIndex].time)
+                          setEditingMatchForDateTime(updateGamesMatches[currentMatchIndex].id)
+                          setTempDate(updateGamesMatches[currentMatchIndex].date || '')
+                          setTempTime(updateGamesMatches[currentMatchIndex].time || '')
+                          setShowDateTimeModal(true)
+                          console.log('✅ Modal deve estar aberto agora')
+                        }}
+                      >
+                        <Calendar className="h-4 w-4 text-primary group-hover:text-primary/80" />
+                        <span className="text-sm font-medium text-foreground group-hover:text-primary/80">
+                          {updateGamesMatches[currentMatchIndex].date && updateGamesMatches[currentMatchIndex].time
+                            ? `${new Date(updateGamesMatches[currentMatchIndex].date).toLocaleDateString('pt-BR')} às ${updateGamesMatches[currentMatchIndex].time}`
+                            : updateGamesMatches[currentMatchIndex].date
+                              ? `${new Date(updateGamesMatches[currentMatchIndex].date).toLocaleDateString('pt-BR')} - Horário não definido`
+                              : 'Clique para definir data e horário'
+                          }
+                        </span>
+                        <Clock className="h-4 w-4 text-primary group-hover:text-primary/80" />
+                        <Pencil className="h-3.5 w-3.5 text-primary/70 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Carrossel */}
                 <div
                   ref={carouselContainerRef}
-                  className="relative overflow-hidden pt-3 pb-1"
+                  className="relative overflow-hidden pt-1 pb-1"
                   style={{ touchAction: 'pan-x' }}
                 >
                   <motion.div
@@ -1280,27 +1377,6 @@ export default function Admin() {
                           }}
                         >
                           <div className="flex flex-col items-center gap-2 w-full">
-                            {/* Data e hora do jogo */}
-                            <div
-                              className="flex items-center gap-1.5 mb-0.5 px-1 py-0.5 rounded-md cursor-pointer hover:bg-primary/10 transition-colors border border-dashed border-primary/20 hover:border-primary/40 bg-primary/5 hover:bg-primary/10"
-                              onClick={() => {
-                                setEditingMatchForDateTime(match.id)
-                                setTempDate(match.date || '')
-                                setTempTime(match.time || '')
-                                setShowDateTimeModal(true)
-                              }}
-                            >
-                              <Clock className="h-3.5 w-3.5 text-primary" />
-                              <span className="text-sm font-medium text-foreground flex-1">
-                                {match.date && match.time
-                                  ? `${new Date(match.date).toLocaleDateString('pt-BR')} às ${match.time}`
-                                  : match.date
-                                    ? `${new Date(match.date).toLocaleDateString('pt-BR')} - Horário não definido`
-                                    : 'Data e horário não definidos'
-                                }
-                              </span>
-                              <Pencil className="h-3 w-3 text-primary/70" />
-                            </div>
 
                             <div className="flex items-center gap-2 w-full relative z-30 px-2">
                               <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
@@ -1823,166 +1899,493 @@ export default function Admin() {
           </Card>
         ) : (
           <>
+            {/* Preparar dados das colunas para layout de 2 colunas */}
+            {(() => {
+              const leftColumn = updateGamesMatches.filter((_, index) => index % 2 === 0)
+              const rightColumn = updateGamesMatches.filter((_, index) => index % 2 === 1)
+
+              return isTwoColumns ? (
+                // Layout de 2 colunas - duas listas independentes
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Coluna Esquerda */}
             <DndContext
-              key={`dnd-context-${reorderKey}`}
+                    key={`left-column-${reorderKey}`}
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleColumnDragEnd(event, 'left', leftColumn, rightColumn)}
+                  >
+                    <SortableContext items={leftColumn.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {leftColumn.map((match, index) => {
+                          const displayInfo = getMatchDisplayInfo(match)
+                          const cardClasses = displayInfo.isLive
+                            ? 'border-2 border-yellow-400 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-lg'
+                            : displayInfo.isFinished
+                            ? 'border-2 border-green-400 bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg'
+                            : ''
+
+                          const isExcluded = match.includeInRound === false
+                          const excludedClasses = isExcluded ? 'opacity-60 border-dashed' : ''
+
+                          return (
+                            <SortableItem key={`${match.id}-${isReordering}`} id={match.id} isReordering={isReordering}>
+                              <Card
+                                className={cn(
+                                  "p-2 transition-colors relative",
+                                  isReordering
+                                    ? "hover:bg-secondary/20"
+                                    : "cursor-pointer hover:bg-secondary/30",
+                                  cardClasses,
+                                  excludedClasses
+                                )}
+                                onClick={isReordering ? undefined : () => handleMatchClick(match.id)}
+                              >
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: index * 0.03 }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {/* Conteúdo do card - igual para ambas as colunas */}
+                                    <div className="flex items-center flex-shrink-0">
+                                      {displayInfo.showLiveBadge ? (
+                                        <div className="flex flex-col items-center justify-center gap-0 min-w-[3rem]">
+                                          <div className="flex items-center gap-0.5">
+                                            <Radio className="h-2.5 w-2.5 text-yellow-300 animate-pulse flex-shrink-0" />
+                                            <span className="text-yellow-300 leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                              AO VIVO
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ) : displayInfo.dateDisplay ? (
+                                        <div className="flex flex-col items-start min-w-[3rem]">
+                                          <span className={cn(
+                                            "leading-none text-[9px] font-semibold uppercase tracking-wide",
+                                            displayInfo.isFinished
+                                              ? "text-green-300"
+                                              : displayInfo.isLive
+                                              ? "text-yellow-300"
+                                              : "text-muted-foreground"
+                                          )}>
+                                            {displayInfo.dateDisplay.dayOfWeek}
+                                          </span>
+                                          <span className={cn(
+                                            "leading-tight text-[9px] font-medium mt-0.5",
+                                            displayInfo.isFinished
+                                              ? "text-green-300/90"
+                                              : displayInfo.isLive
+                                              ? "text-yellow-300/90"
+                                              : "text-muted-foreground/80"
+                                          )}>
+                                            {displayInfo.dateDisplay.date}
+                                            {' '}
+                                            <span className={cn(
+                                              "font-semibold",
+                                              displayInfo.isFinished && "text-green-300",
+                                              displayInfo.isLive && "text-yellow-300"
+                                            )}>
+                                              {displayInfo.dateDisplay.time}
+                                            </span>
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-col items-start min-w-[3rem]">
+                                          <span className="text-muted-foreground leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                            ---
+                                          </span>
+                                          <span className="text-muted-foreground/70 leading-tight text-[9px] font-medium mt-0.5">
+                                            --/-- ??:??
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className={cn(
+                                      "h-6 w-px flex-shrink-0",
+                                      displayInfo.isLive && "bg-yellow-400",
+                                      displayInfo.isFinished && "bg-green-400",
+                                      !displayInfo.isLive && !displayInfo.isFinished && "bg-border"
+                                    )} />
+
+                                    <div className="flex-1 flex items-center min-w-0">
+                                      <div className="flex-1 flex justify-end pr-1.5 min-w-0">
+                                        <span className={cn(
+                                          "text-sm font-semibold truncate text-right leading-tight",
+                                          displayInfo.isLive && "text-yellow-300",
+                                          displayInfo.isFinished && "text-green-300",
+                                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                        )}>{getTeamDisplayName(match.homeTeam)}</span>
+                                      </div>
+
+                                      <div className="w-[80px] flex items-center gap-1 justify-center flex-shrink-0 px-1">
+                                        <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                                        <span className={cn(
+                                          "text-sm font-bold flex-shrink-0 min-w-[2rem] text-center",
+                                          displayInfo.isLive && "text-yellow-300",
+                                          displayInfo.isFinished && "text-green-300",
+                                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                        )}>
+                                          {displayInfo.scoreDisplay || "0 × 0"}
+                                        </span>
+                                        <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                                      </div>
+
+                                      <div className="flex-1 flex justify-start pl-1.5 min-w-0">
+                                        <span className={cn(
+                                          "text-sm font-semibold truncate text-left leading-tight",
+                                          displayInfo.isLive && "text-yellow-300",
+                                          displayInfo.isFinished && "text-green-300",
+                                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                        )}>{getTeamDisplayName(match.awayTeam)}</span>
+                                      </div>
+                                    </div>
+
+                                    {isExcluded && (
+                                      <XCircle className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                                    )}
+
+                                    <div className="flex-shrink-0 ml-2">
+                                      {displayInfo.statusType === 'scheduled' && (
+                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                      {displayInfo.statusType === 'live' && (
+                                        <Radio className="h-4 w-4 text-yellow-400" />
+                                      )}
+                                      {displayInfo.statusType === 'finished' && (
+                                        <CheckCircle2 className="h-4 w-4 text-green-400" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              </Card>
+                            </SortableItem>
+                          )
+                        })}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+
+                  {/* Coluna Direita */}
+                  <DndContext
+                    key={`right-column-${reorderKey}`}
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleColumnDragEnd(event, 'right', leftColumn, rightColumn)}
+                  >
+                    <SortableContext items={rightColumn.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {rightColumn.map((match, index) => {
+                          const displayInfo = getMatchDisplayInfo(match)
+                          const cardClasses = displayInfo.isLive
+                            ? 'border-2 border-yellow-400 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-lg'
+                            : displayInfo.isFinished
+                            ? 'border-2 border-green-400 bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg'
+                            : ''
+
+                          const isExcluded = match.includeInRound === false
+                          const excludedClasses = isExcluded ? 'opacity-60 border-dashed' : ''
+
+                          return (
+                            <SortableItem key={`${match.id}-${isReordering}`} id={match.id} isReordering={isReordering}>
+                              <Card
+                                className={cn(
+                                  "p-2 transition-colors relative",
+                                  isReordering
+                                    ? "hover:bg-secondary/20"
+                                    : "cursor-pointer hover:bg-secondary/30",
+                                  cardClasses,
+                                  excludedClasses
+                                )}
+                                onClick={isReordering ? undefined : () => handleMatchClick(match.id)}
+                              >
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: index * 0.03 }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {/* Mesmo conteúdo do card da coluna esquerda */}
+                                    <div className="flex items-center flex-shrink-0">
+                                      {displayInfo.showLiveBadge ? (
+                                        <div className="flex flex-col items-center justify-center gap-0 min-w-[3rem]">
+                                          <div className="flex items-center gap-0.5">
+                                            <Radio className="h-2.5 w-2.5 text-yellow-300 animate-pulse flex-shrink-0" />
+                                            <span className="text-yellow-300 leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                              AO VIVO
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ) : displayInfo.dateDisplay ? (
+                                        <div className="flex flex-col items-start min-w-[3rem]">
+                                          <span className={cn(
+                                            "leading-none text-[9px] font-semibold uppercase tracking-wide",
+                                            displayInfo.isFinished
+                                              ? "text-green-300"
+                                              : displayInfo.isLive
+                                              ? "text-yellow-300"
+                                              : "text-muted-foreground"
+                                          )}>
+                                            {displayInfo.dateDisplay.dayOfWeek}
+                                          </span>
+                                          <span className={cn(
+                                            "leading-tight text-[9px] font-medium mt-0.5",
+                                            displayInfo.isFinished
+                                              ? "text-green-300/90"
+                                              : displayInfo.isLive
+                                              ? "text-yellow-300/90"
+                                              : "text-muted-foreground/80"
+                                          )}>
+                                            {displayInfo.dateDisplay.date}
+                                            {' '}
+                                            <span className={cn(
+                                              "font-semibold",
+                                              displayInfo.isFinished && "text-green-300",
+                                              displayInfo.isLive && "text-yellow-300"
+                                            )}>
+                                              {displayInfo.dateDisplay.time}
+                                            </span>
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-col items-start min-w-[3rem]">
+                                          <span className="text-muted-foreground leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                            ---
+                                          </span>
+                                          <span className="text-muted-foreground/70 leading-tight text-[9px] font-medium mt-0.5">
+                                            --/-- ??:??
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className={cn(
+                                      "h-6 w-px flex-shrink-0",
+                                      displayInfo.isLive && "bg-yellow-400",
+                                      displayInfo.isFinished && "bg-green-400",
+                                      !displayInfo.isLive && !displayInfo.isFinished && "bg-border"
+                                    )} />
+
+                                    <div className="flex-1 flex items-center min-w-0">
+                                      <div className="flex-1 flex justify-end pr-1.5 min-w-0">
+                                        <span className={cn(
+                                          "text-sm font-semibold truncate text-right leading-tight",
+                                          displayInfo.isLive && "text-yellow-300",
+                                          displayInfo.isFinished && "text-green-300",
+                                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                        )}>{getTeamDisplayName(match.homeTeam)}</span>
+                                      </div>
+
+                                      <div className="w-[80px] flex items-center gap-1 justify-center flex-shrink-0 px-1">
+                                        <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                                        <span className={cn(
+                                          "text-sm font-bold flex-shrink-0 min-w-[2rem] text-center",
+                                          displayInfo.isLive && "text-yellow-300",
+                                          displayInfo.isFinished && "text-green-300",
+                                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                        )}>
+                                          {displayInfo.scoreDisplay || "0 × 0"}
+                                        </span>
+                                        <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                                      </div>
+
+                                      <div className="flex-1 flex justify-start pl-1.5 min-w-0">
+                                        <span className={cn(
+                                          "text-sm font-semibold truncate text-left leading-tight",
+                                          displayInfo.isLive && "text-yellow-300",
+                                          displayInfo.isFinished && "text-green-300",
+                                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                        )}>{getTeamDisplayName(match.awayTeam)}</span>
+                                      </div>
+                                    </div>
+
+                                    {isExcluded && (
+                                      <XCircle className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                                    )}
+
+                                    <div className="flex-shrink-0 ml-2">
+                                      {displayInfo.statusType === 'scheduled' && (
+                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                      {displayInfo.statusType === 'live' && (
+                                        <Radio className="h-4 w-4 text-yellow-400" />
+                                      )}
+                                      {displayInfo.statusType === 'finished' && (
+                                        <CheckCircle2 className="h-4 w-4 text-green-400" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              </Card>
+                            </SortableItem>
+                          )
+                        })}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              ) : (
+                // Layout de 1 coluna - lista única
+                <DndContext
+                  key={`single-column-${reorderKey}`}
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext items={updateGamesMatches.map(m => m.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
-                  {updateGamesMatches.map((match, index) => {
-                    const displayInfo = getMatchDisplayInfo(match)
-                    const cardClasses = displayInfo.isLive
-                      ? 'border-2 border-yellow-400 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-lg'
-                      : displayInfo.isFinished
-                      ? 'border-2 border-green-400 bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg'
-                      : ''
+                  <SortableContext
+                    items={updateGamesMatches.map(m => m.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {updateGamesMatches.map((match, index) => {
+                        const displayInfo = getMatchDisplayInfo(match)
+                        const cardClasses = displayInfo.isLive
+                          ? 'border-2 border-yellow-400 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-lg'
+                          : displayInfo.isFinished
+                          ? 'border-2 border-green-400 bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg'
+                          : ''
 
-                    const isExcluded = match.includeInRound === false
-                    const excludedClasses = isExcluded ? 'opacity-60 border-dashed' : ''
+                        const isExcluded = match.includeInRound === false
+                        const excludedClasses = isExcluded ? 'opacity-60 border-dashed' : ''
 
-                return (
-                  <SortableItem key={`${match.id}-${isReordering}`} id={match.id} isReordering={isReordering}>
-                        <Card
-                          className={cn(
-                            "p-2 transition-colors relative",
-                            isReordering
-                              ? "hover:bg-secondary/20"
-                              : "cursor-pointer hover:bg-secondary/30",
-                            cardClasses,
-                            excludedClasses
-                          )}
-                          onClick={isReordering ? undefined : () => handleMatchClick(match.id)}
-                        >
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                    >
-                      <div className="flex items-center gap-2">
-                        {/* Badge de status ou data/hora */}
-                        <div className="flex items-center flex-shrink-0">
-                          {displayInfo.showLiveBadge ? (
-                            <div className="flex flex-col items-center justify-center gap-0 min-w-[3rem]">
-                              <div className="flex items-center gap-0.5">
-                                <Radio className="h-2.5 w-2.5 text-yellow-300 animate-pulse flex-shrink-0" />
-                                <span className="text-yellow-300 leading-none text-[9px] font-semibold uppercase tracking-wide">
-                                  AO VIVO
-                                </span>
-                              </div>
-                            </div>
-                          ) : displayInfo.dateDisplay ? (
-                            <div className="flex flex-col items-start min-w-[3rem]">
-                              <span className={cn(
-                                "leading-none text-[9px] font-semibold uppercase tracking-wide",
-                                displayInfo.isFinished 
-                                  ? "text-green-300" 
-                                  : displayInfo.isLive
-                                  ? "text-yellow-300"
-                                  : "text-muted-foreground"
-                              )}>
-                                {displayInfo.dateDisplay.dayOfWeek}
-                              </span>
-                              <span className={cn(
-                                "leading-tight text-[9px] font-medium mt-0.5",
-                                displayInfo.isFinished 
-                                  ? "text-green-300/90" 
-                                  : displayInfo.isLive
-                                  ? "text-yellow-300/90"
-                                  : "text-muted-foreground/80"
-                              )}>
-                                {displayInfo.dateDisplay.date}
-                                {' '}
-                                <span className={cn(
-                                  "font-semibold",
-                                  displayInfo.isFinished && "text-green-300",
-                                  displayInfo.isLive && "text-yellow-300"
-                                )}>
-                                  {displayInfo.dateDisplay.time}
-                                </span>
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-start min-w-[3rem]">
-                              <span className="text-muted-foreground leading-none text-[9px] font-semibold uppercase tracking-wide">
-                                ---
-                              </span>
-                              <span className="text-muted-foreground/70 leading-tight text-[9px] font-medium mt-0.5">
-                                --/-- ??:??
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        return (
+                          <SortableItem key={`${match.id}-${isReordering}`} id={match.id} isReordering={isReordering}>
+                            <Card
+                              className={cn(
+                                "p-2 transition-colors relative",
+                                isReordering
+                                  ? "hover:bg-secondary/20"
+                                  : "cursor-pointer hover:bg-secondary/30",
+                                cardClasses,
+                                excludedClasses
+                              )}
+                              onClick={isReordering ? undefined : () => handleMatchClick(match.id)}
+                            >
+                              <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.03 }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {/* Mesmo conteúdo do card das colunas */}
+                                  <div className="flex items-center flex-shrink-0">
+                                    {displayInfo.showLiveBadge ? (
+                                      <div className="flex flex-col items-center justify-center gap-0 min-w-[3rem]">
+                                        <div className="flex items-center gap-0.5">
+                                          <Radio className="h-2.5 w-2.5 text-yellow-300 animate-pulse flex-shrink-0" />
+                                          <span className="text-yellow-300 leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                            AO VIVO
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ) : displayInfo.dateDisplay ? (
+                                      <div className="flex flex-col items-start min-w-[3rem]">
+                                        <span className={cn(
+                                          "leading-none text-[9px] font-semibold uppercase tracking-wide",
+                                          displayInfo.isFinished
+                                            ? "text-green-300"
+                                            : displayInfo.isLive
+                                            ? "text-yellow-300"
+                                            : "text-muted-foreground"
+                                        )}>
+                                          {displayInfo.dateDisplay.dayOfWeek}
+                                        </span>
+                                        <span className={cn(
+                                          "leading-tight text-[9px] font-medium mt-0.5",
+                                          displayInfo.isFinished
+                                            ? "text-green-300/90"
+                                            : displayInfo.isLive
+                                            ? "text-yellow-300/90"
+                                            : "text-muted-foreground/80"
+                                        )}>
+                                          {displayInfo.dateDisplay.date}
+                                          {' '}
+                                          <span className={cn(
+                                            "font-semibold",
+                                            displayInfo.isFinished && "text-green-300",
+                                            displayInfo.isLive && "text-yellow-300"
+                                          )}>
+                                            {displayInfo.dateDisplay.time}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col items-start min-w-[3rem]">
+                                        <span className="text-muted-foreground leading-none text-[9px] font-semibold uppercase tracking-wide">
+                                          ---
+                                        </span>
+                                        <span className="text-muted-foreground/70 leading-tight text-[9px] font-medium mt-0.5">
+                                          --/-- ??:??
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
 
-                        {/* Separador vertical */}
-                        <div className={cn(
-                          "h-6 w-px flex-shrink-0",
-                          displayInfo.isLive && "bg-yellow-400",
-                          displayInfo.isFinished && "bg-green-400",
-                          !displayInfo.isLive && !displayInfo.isFinished && "bg-border"
-                        )} />
+                                  <div className={cn(
+                                    "h-6 w-px flex-shrink-0",
+                                    displayInfo.isLive && "bg-yellow-400",
+                                    displayInfo.isFinished && "bg-green-400",
+                                    !displayInfo.isLive && !displayInfo.isFinished && "bg-border"
+                                  )} />
 
-                        {/* Confronto compacto com placar */}
-                        <div className="flex-1 flex items-center min-w-0">
-                          <div className="flex-1 flex justify-end pr-1.5 min-w-0">
-                            <span className={cn(
-                              "text-sm font-semibold truncate text-right leading-tight",
-                              displayInfo.isLive && "text-yellow-300",
-                              displayInfo.isFinished && "text-green-300",
-                              !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                            )}>{getTeamDisplayName(match.homeTeam)}</span>
-                          </div>
-                          
-                          <div className="w-[80px] flex items-center gap-1 justify-center flex-shrink-0 px-1">
-                            <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-5 w-5" noCircle />
-                            <span className={cn(
-                              "text-sm font-bold flex-shrink-0 min-w-[2rem] text-center",
-                              displayInfo.isLive && "text-yellow-300",
-                              displayInfo.isFinished && "text-green-300",
-                              !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                            )}>
-                              {displayInfo.scoreDisplay || "0 × 0"}
-                            </span>
-                            <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-5 w-5" noCircle />
-                          </div>
-                          
-                          <div className="flex-1 flex justify-start pl-1.5 min-w-0">
-                            <span className={cn(
-                              "text-sm font-semibold truncate text-left leading-tight",
-                              displayInfo.isLive && "text-yellow-300",
-                              displayInfo.isFinished && "text-green-300",
-                              !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                            )}>{getTeamDisplayName(match.awayTeam)}</span>
-                          </div>
-                        </div>
+                                  <div className="flex-1 flex items-center min-w-0">
+                                    <div className="flex-1 flex justify-end pr-1.5 min-w-0">
+                                      <span className={cn(
+                                        "text-sm font-semibold truncate text-right leading-tight",
+                                        displayInfo.isLive && "text-yellow-300",
+                                        displayInfo.isFinished && "text-green-300",
+                                        !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                      )}>{getTeamDisplayName(match.homeTeam)}</span>
+                                    </div>
 
-                        {/* Indicador de exclusão */}
-                        {isExcluded && (
-                          <XCircle className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
-                        )}
+                                    <div className="w-[80px] flex items-center gap-1 justify-center flex-shrink-0 px-1">
+                                      <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                                      <span className={cn(
+                                        "text-sm font-bold flex-shrink-0 min-w-[2rem] text-center",
+                                        displayInfo.isLive && "text-yellow-300",
+                                        displayInfo.isFinished && "text-green-300",
+                                        !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                      )}>
+                                        {displayInfo.scoreDisplay || "0 × 0"}
+                                      </span>
+                                      <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                                    </div>
 
-                        {/* Ícone de status no canto direito */}
-                        <div className="flex-shrink-0 ml-2">
-                          {displayInfo.statusType === 'scheduled' && (
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          {displayInfo.statusType === 'live' && (
-                            <Radio className="h-4 w-4 text-yellow-400" />
-                          )}
-                          {displayInfo.statusType === 'finished' && (
-                            <CheckCircle2 className="h-4 w-4 text-green-400" />
-                          )}
-                        </div>
-                      </div>
-                        </motion.div>
-                      </Card>
-                    </SortableItem>
-                    )
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
+                                    <div className="flex-1 flex justify-start pl-1.5 min-w-0">
+                                      <span className={cn(
+                                        "text-sm font-semibold truncate text-left leading-tight",
+                                        displayInfo.isLive && "text-yellow-300",
+                                        displayInfo.isFinished && "text-green-300",
+                                        !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
+                                      )}>{getTeamDisplayName(match.awayTeam)}</span>
+                                    </div>
+                                  </div>
+
+                                  {isExcluded && (
+                                    <XCircle className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                                  )}
+
+                                  <div className="flex-shrink-0 ml-2">
+                                    {displayInfo.statusType === 'scheduled' && (
+                                      <Clock className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    {displayInfo.statusType === 'live' && (
+                                      <Radio className="h-4 w-4 text-yellow-400" />
+                                    )}
+                                    {displayInfo.statusType === 'finished' && (
+                                      <CheckCircle2 className="h-4 w-4 text-green-400" />
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            </Card>
+                          </SortableItem>
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )
+            })()}
 
             {/* Botão Adicionar Confronto */}
             {!showAddMatch && (
@@ -2145,73 +2548,6 @@ export default function Admin() {
           </>
         )}
 
-        {/* Modal de edição de data e hora */}
-        <AnimatePresence>
-          {showDateTimeModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowDateTimeModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-background border border-border rounded-lg p-6 max-w-sm w-full"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-primary/20 rounded-full">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <h2 className="text-lg font-bold">Editar Data e Hora</h2>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Data</label>
-                    <Input
-                      type="date"
-                      value={tempDate}
-                      onChange={(e) => setTempDate(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Hora</label>
-                    <select
-                      value={tempTime}
-                      onChange={(e) => setTempTime(e.target.value)}
-                      className="w-full h-10 text-sm px-3 rounded border border-border bg-background"
-                    >
-                      <option value="">Selecione</option>
-                      {config.getGameTimesSync().map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 justify-end mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDateTimeModal(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSaveDateTime}
-                  >
-                    Salvar
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Modais de confirmação */}
         <AnimatePresence>
@@ -3078,9 +3414,271 @@ export default function Admin() {
             )
           })
         )}
+
       </div>
     ), false)
   }
 
-  return null
+  // Determinar qual conteúdo renderizar baseado no currentView
+  let content: React.ReactNode
+
+  console.log('Admin component render:', { currentView, selectedRound, rounds })
+
+  if (currentView === 'menu') {
+    content = renderAdminView('Painel Administrativo', '', (
+      <div className="grid grid-cols-1 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0 * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCurrentView('create-round')}
+          className="cursor-pointer"
+        >
+          <Card className="p-6 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-full">
+                <Plus className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Criar Rodada</h3>
+                <p className="text-sm text-muted-foreground">Criar uma nova rodada de palpites</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1 * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCurrentView('manage-rounds')}
+          className="cursor-pointer"
+        >
+          <Card className="p-6 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-full">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Gerenciar Rodadas</h3>
+                <p className="text-sm text-muted-foreground">Editar, excluir ou gerenciar rodadas existentes</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2 * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCurrentView('update-games')}
+          className="cursor-pointer"
+        >
+          <Card className="p-6 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-full">
+                <Edit className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Editar Jogos</h3>
+                <p className="text-sm text-muted-foreground">Editar placares, datas e status dos jogos</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 3 * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCurrentView('manage-tickets')}
+          className="cursor-pointer"
+        >
+          <Card className="p-6 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-full">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Gerenciar Palpites</h3>
+                <p className="text-sm text-muted-foreground">Aprovar, rejeitar ou gerenciar palpites dos usuários</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 4 * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCurrentView('manage-users')}
+          className="cursor-pointer"
+        >
+          <Card className="p-6 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-full">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Gerenciar Usuários</h3>
+                <p className="text-sm text-muted-foreground">Editar dados e permissões dos usuários</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 5 * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCurrentView('config')}
+          className="cursor-pointer"
+        >
+          <Card className="p-6 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-full">
+                <Settings className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Configurações</h3>
+                <p className="text-sm text-muted-foreground">Configurar horários de jogos e outras opções</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    ), false)
+  } else if (currentView === 'create-round') {
+    content = renderCreateRoundView()
+  } else if (currentView === 'manage-rounds') {
+    content = renderManageRoundsView()
+  } else if (currentView === 'update-games') {
+    content = renderUpdateGamesView()
+  } else if (currentView === 'manage-tickets') {
+    content = renderManageTicketsView()
+  } else if (currentView === 'manage-users') {
+    content = renderManageUsersView()
+  } else if (currentView === 'config') {
+    content = renderConfigView()
+  } else {
+    content = renderAdminView('Painel Administrativo', '', <div>View não encontrada</div>, false)
+  }
+
+  return (
+    <>
+      {content}
+
+      {/* Modal de edição de data e hora - versão ultra simplificada */}
+      {showDateTimeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+          onClick={() => setShowDateTimeModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
+              Editar Data e Hora
+            </h2>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#666' }}>
+                Data
+              </label>
+              <input
+                type="date"
+                value={tempDate}
+                onChange={(e) => setTempDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#666' }}>
+                Hora
+              </label>
+              <select
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">Selecione</option>
+                {config.getGameTimesSync().map(time => (
+                  <option key={time} value={time}>{time}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDateTimeModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#666',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveDateTime}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
