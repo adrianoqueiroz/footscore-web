@@ -1,7 +1,9 @@
+import React from 'react'
 import { Home, Ticket, Trophy, Settings, HelpCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useHapticFeedback } from '@/hooks/useHapticFeedback'
 
 type NavigationItem = 'rounds' | 'tickets' | 'ranking' | 'admin' | 'about'
 
@@ -20,9 +22,20 @@ const navItems: { key: NavigationItem; label: string; icon: typeof Home; path: s
 export default function BottomNav({ isAdmin = false }: BottomNavProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const triggerHaptic = useHapticFeedback()
   const items = isAdmin ? navItems : navItems.filter(item => item.key !== 'admin')
 
-  const getCurrentPage = (): NavigationItem => {
+  // Detectar se está no iOS
+  const isIOS = React.useMemo(() => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  }, [])
+
+  // Prevenir múltiplas navegações simultâneas
+  const isNavigatingRef = React.useRef(false)
+
+  // Memoizar cálculo da página atual para evitar recálculos desnecessários
+  const current = React.useMemo(() => {
     // Se está na página de detalhes do ticket, verificar de onde veio
     if (location.pathname.startsWith('/tickets/')) {
       // Verificar se veio do ranking através do query parameter
@@ -35,9 +48,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
       return 'tickets'
     }
     return navItems.find(i => location.pathname.startsWith(i.path))?.key || 'rounds'
-  }
-
-  const current = getCurrentPage()
+  }, [location.pathname, location.search])
 
   return (
     <>
@@ -51,23 +62,73 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
             return (
               <motion.button
                 key={item.key}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+
+                  // Prevenir múltiplas navegações simultâneas
+                  if (isNavigatingRef.current) return
+
+                  // Prioridade máxima: navegar imediatamente sem verificações desnecessárias
                   if (location.pathname !== item.path) {
+                    isNavigatingRef.current = true
+                    // Feedback háptico em background (não bloqueante)
+                    setTimeout(() => triggerHaptic('light'), 0)
+                    // Navegação síncrona com prioridade máxima
                     navigate(item.path, { replace: false })
+                    // Reset flag após um pequeno delay
+                    setTimeout(() => {
+                      isNavigatingRef.current = false
+                    }, 100)
                   }
                 }}
+                onTouchStart={isIOS ? (e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+
+                  // Prevenir múltiplas navegações simultâneas
+                  if (isNavigatingRef.current) return
+
+                  // Para iOS: usar touchstart para resposta mais imediata
+                  if (location.pathname !== item.path) {
+                    isNavigatingRef.current = true
+                    // Forçar navegação imediata no iOS usando requestAnimationFrame
+                    requestAnimationFrame(() => {
+                      navigate(item.path, { replace: false })
+                    })
+                    // Feedback háptico em background
+                    setTimeout(() => triggerHaptic('light'), 10)
+                    // Reset flag após um pequeno delay
+                    setTimeout(() => {
+                      isNavigatingRef.current = false
+                    }, 100)
+                  }
+                } : undefined}
                 className={cn(
-                  'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 transition-colors',
+                  'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-3 transition-colors',
+                  'touch-manipulation select-none', // Otimizações específicas para toque
+                  isIOS && 'cursor-pointer', // Cursor específico para iOS
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 )}
+                style={isIOS ? {
+                  WebkitTapHighlightColor: 'transparent', // Remove highlight azul do iOS
+                  WebkitTouchCallout: 'none', // Previne menu de contexto
+                  WebkitUserSelect: 'none', // Previne seleção de texto
+                } : undefined}
                 whileTap={{ scale: 0.95 }}
               >
                 {isActive && (
                   <motion.div
                     className="absolute -top-0.5 left-1/2 h-1 w-8 rounded-full bg-primary pointer-events-none"
-                    initial={{ x: '-50%' }}
-                    animate={{ x: '-50%' }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
+                    animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 30,
+                      duration: 0.4,
+                      opacity: { duration: 0.15 }
+                    }}
                   />
                 )}
                 <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
@@ -94,10 +155,10 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                   }
                 }}
                 className={cn(
-                  'relative flex items-center gap-3 rounded-lg px-4 py-3 transition-all text-left',
+                  'relative flex items-center gap-3 rounded-lg px-6 py-4 transition-all text-left',
                   'hover:bg-secondary/50 hover:text-foreground',
-                  isActive 
-                    ? 'bg-primary/10 text-primary font-medium' 
+                  isActive
+                    ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground'
                 )}
                 whileHover={{ scale: 1.02 }}
@@ -105,10 +166,16 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
               >
                 {isActive && (
                   <motion.div
-                    className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-primary pointer-events-none"
-                    initial={{ scaleY: 0 }}
-                    animate={{ scaleY: 1 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    className="absolute left-0 top-4 h-6 w-1 rounded-r-full bg-primary pointer-events-none"
+                    initial={{ scaleY: 0, opacity: 0 }}
+                    animate={{ scaleY: 1, opacity: 1 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 30,
+                      duration: 0.4,
+                      opacity: { duration: 0.15 }
+                    }}
                   />
                 )}
                 <Icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-primary')} />

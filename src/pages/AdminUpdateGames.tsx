@@ -178,12 +178,12 @@ export default function AdminUpdateGames() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 8, // Aumentado para evitar conflitos com scroll
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 100,
+        delay: 150, // Aumentado para dar mais tempo para scroll antes de ativar drag
         tolerance: 8,
       },
     }),

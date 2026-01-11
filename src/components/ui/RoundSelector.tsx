@@ -36,12 +36,8 @@ export default function RoundSelector({ rounds, selectedRound, onRoundChange, on
     // - alwaysCallOnOpen é true (sempre chamar)
     // - ou não temos rodadas (para carregar inicialmente)
     if (newIsOpen && onOpen && (alwaysCallOnOpen || rounds.length === 0)) {
-      // Usar requestAnimationFrame para garantir que o dropdown abra primeiro
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          onOpen()
-        })
-      })
+      // Chamar imediatamente para reduzir percepção de delay
+      onOpen()
     }
   }
   

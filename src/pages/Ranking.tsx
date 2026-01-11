@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Trophy, Radio, Info } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'

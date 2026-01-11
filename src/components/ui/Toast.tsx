@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
@@ -59,10 +59,10 @@ const ToastComponent = ({ toast, onClose }: ToastProps) => {
       // Animar para fora na direção do arrasto
       const targetX = info.offset.x > 0 ? 500 : -500
       x.set(targetX)
-      // Fechar após a animação
+      // Fechar após a animação (tempo aumentado para combinar com a transição mais longa)
       setTimeout(() => {
         onClose(toast.id)
-      }, 300)
+      }, 500)
     } else {
       // Se não arrastou o suficiente, volta para a posição original
       x.set(0)
@@ -72,26 +72,27 @@ const ToastComponent = ({ toast, onClose }: ToastProps) => {
   return (
     <motion.div
       drag="x"
-      dragElastic={0.3}
+      dragElastic={0.2}
+      dragConstraints={{ left: 0, right: 0 }}
       onDragStart={() => setIsDragging(true)}
       onDragEnd={handleDragEnd}
       style={{ x, opacity, scale }}
       initial={{ opacity: 0, y: -20, scale: 0.95 }}
-      animate={{ 
-        opacity: isDragging ? undefined : shouldExit ? 0 : 1, 
-        y: 0, 
-        scale: isDragging ? undefined : shouldExit ? 0.8 : 1 
+      animate={{
+        opacity: isDragging ? undefined : shouldExit ? 0 : 1,
+        y: 0,
+        scale: isDragging ? undefined : shouldExit ? 0.8 : 1
       }}
       exit={{ opacity: 0, y: 10, scale: 0.98 }}
-      transition={{ 
-        duration: 0.3, 
-        ease: [0.4, 0, 0.2, 1],
-        exit: { 
-          duration: 0.4, 
-          ease: [0.4, 0, 0.6, 1],
-          opacity: { duration: 0.4 },
-          y: { duration: 0.4 },
-          scale: { duration: 0.4 }
+      transition={{
+        duration: 0.4,
+        ease: [0.25, 0.46, 0.45, 0.94],
+        exit: {
+          duration: 0.5,
+          ease: [0.25, 0.46, 0.45, 0.94],
+          opacity: { duration: 0.5 },
+          y: { duration: 0.5 },
+          scale: { duration: 0.5 }
         }
       }}
       className={cn(
@@ -101,14 +102,7 @@ const ToastComponent = ({ toast, onClose }: ToastProps) => {
       )}
     >
       <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
-      <p className="flex-1 text-sm font-medium leading-relaxed pr-1">{toast.message}</p>
-      <button
-        onClick={() => onClose(toast.id)}
-        className="flex-shrink-0 hover:opacity-70 transition-opacity p-0.5 rounded hover:bg-foreground/10"
-        aria-label="Fechar"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      <p className="flex-1 text-sm font-medium leading-relaxed">{toast.message}</p>
     </motion.div>
   )
 }

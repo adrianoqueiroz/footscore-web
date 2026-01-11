@@ -308,7 +308,7 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
   }, []) // Removido onScoreUpdate das dependências
 
   useEffect(() => {
-    // Conectar com delay para não bloquear o carregamento inicial
+    // Conectar com delay maior para não bloquear navegação
     // E apenas se o navegador suporta EventSource
     if (typeof EventSource === 'undefined') {
       console.warn('[useMatchEvents] EventSource não suportado pelo navegador')
@@ -322,7 +322,7 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
         console.error('[useMatchEvents] Erro ao conectar SSE (não crítico):', error)
         // Não bloquear a aplicação se SSE falhar
       }
-    }, 2000) // Aguardar 2 segundos antes de conectar para não bloquear
+    }, 3000) // Aguardar 3 segundos antes de conectar para priorizar navegação
 
 
     return () => {

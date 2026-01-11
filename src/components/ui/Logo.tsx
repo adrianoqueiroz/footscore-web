@@ -50,11 +50,11 @@ export default function Logo({ size = 'md', className, showStars = true, animate
       <span className="relative inline-block">
         {/* Estrelas acima centralizadas sobre "tSc" (t de Foot + Sc de Score) - estrela do meio acima do S */}
         {showStars && (
-          <div className={cn('absolute flex items-center justify-center', classes.starsGap)} style={{ 
+          <div className={cn('absolute flex items-center justify-center', classes.starsGap)} style={{
             top: size === 'sm' ? '-0.375rem' : size === 'md' ? '-0.5rem' : '-0.625rem',
             left: size === 'sm' ? 'calc(50% + 0.15em)' : size === 'md' ? 'calc(50% + 0.2em)' : 'calc(50% + 0.25em)',
             transform: 'translateX(-50%)',
-            zIndex: 10,
+            zIndex: 50,
             overflow: 'visible',
             pointerEvents: 'none'
           }}>

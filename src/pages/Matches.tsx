@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Info, Trophy, Radio, Lock, CheckCircle2, Clock } from 'lucide-react'
@@ -28,92 +28,82 @@ export default function Matches() {
   const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
   const [showBlockedMessage, setShowBlockedMessage] = useState(false)
 
+  // AbortController para cancelar operações quando a página muda
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   // Conectar ao SSE para receber atualizações de placar e status
   useMatchEvents((event) => {
-
     // Só processar eventos se houver uma rodada selecionada
     if (!selectedRound) {
       return
     }
 
-    if (event.type === 'score_update') {
-      const eventRound = parseInt(String(event.data.round))
+    // Processar evento de forma assíncrona para não bloquear navegação
+    setTimeout(() => {
+      if (event.type === 'score_update') {
+        const eventRound = parseInt(String(event.data.round))
 
-      // Verificar se o jogo pertence à rodada selecionada
-      if (selectedRound === eventRound) {
-        // Atualizar placar e status na lista de matches (sempre, mesmo se não mudou o placar, para atualizar status)
-        setMatches(prevMatches =>
-          prevMatches.map(match => {
-            if (match.id === event.data.matchId) {
-              return {
-                ...match,
-                homeScore: event.data.homeScore !== undefined ? event.data.homeScore : match.homeScore,
-                awayScore: event.data.awayScore !== undefined ? event.data.awayScore : match.awayScore,
-                status: event.data.status !== undefined ? event.data.status as 'scheduled' | 'live' | 'finished' : match.status
+        if (selectedRound === eventRound) {
+          setMatches(prevMatches =>
+            prevMatches.map(match => {
+              if (match.id === event.data.matchId) {
+                return {
+                  ...match,
+                  homeScore: event.data.homeScore !== undefined ? event.data.homeScore : match.homeScore,
+                  awayScore: event.data.awayScore !== undefined ? event.data.awayScore : match.awayScore,
+                  status: event.data.status !== undefined ? event.data.status as 'scheduled' | 'live' | 'finished' : match.status
+                }
               }
+              return match
+            })
+          )
+
+          if (event.data.scoreChanged) {
+            const matchInfo = {
+              homeTeam: event.data.homeTeam,
+              awayTeam: event.data.awayTeam,
+              homeScore: event.data.homeScore,
+              awayScore: event.data.awayScore,
+              goalScorer: event.data.goalScorer,
+              isGoalCancelled: event.data.isGoalCancelled || false,
+              homeTeamLogo: event.data.homeTeamLogo || null,
+              awayTeamLogo: event.data.awayTeamLogo || null,
             }
-            return match
-          })
-        )
 
-        // Se o placar mudou, mostrar notificação
-        if (event.data.scoreChanged) {
-          // Atualizar matchInfo e mostrar bola pulsando
-          const matchInfo = {
-            homeTeam: event.data.homeTeam,
-            awayTeam: event.data.awayTeam,
-            homeScore: event.data.homeScore,
-            awayScore: event.data.awayScore,
-            goalScorer: event.data.goalScorer,
-            isGoalCancelled: event.data.isGoalCancelled || false,
-            homeTeamLogo: event.data.homeTeamLogo || null,
-            awayTeamLogo: event.data.awayTeamLogo || null,
+            setLastScoreUpdate(matchInfo)
+            setShowPulsingBall(false)
+            setTimeout(() => setShowPulsingBall(true), 20)
           }
+        }
+      } else if (event.type === 'match_status_update') {
+        const eventRound = parseInt(String(event.data.round))
 
-          // Atualizar matchInfo primeiro
-          setLastScoreUpdate(matchInfo)
+        if (selectedRound === eventRound) {
+          setMatches(prevMatches => {
+            const matchIndex = prevMatches.findIndex(m => m.id === event.data.matchId)
+            if (matchIndex === -1) {
+              return prevMatches
+            }
 
-          // Mostrar bola pulsando
-          setShowPulsingBall(false)
-          setTimeout(() => setShowPulsingBall(true), 20)
+            const updatedMatches = [...prevMatches]
+            const oldMatch = updatedMatches[matchIndex]
+
+            const updatedMatch: Match = {
+              ...oldMatch,
+              status: event.data.status as 'scheduled' | 'live' | 'finished'
+            }
+
+            if (event.data.homeScore !== undefined && event.data.awayScore !== undefined) {
+              updatedMatch.homeScore = event.data.homeScore
+              updatedMatch.awayScore = event.data.awayScore
+            }
+
+            updatedMatches[matchIndex] = updatedMatch
+            return updatedMatches
+          })
         }
       }
-    } else if (event.type === 'match_status_update') {
-      // Evento de atualização de status de jogo individual
-      const eventRound = parseInt(String(event.data.round))
-
-      // Verificar se o jogo pertence à rodada selecionada
-      if (selectedRound === eventRound) {
-
-        // Atualizar o estado matches para refletir a mudança de status
-        setMatches(prevMatches => {
-          const matchIndex = prevMatches.findIndex(m => m.id === event.data.matchId)
-          if (matchIndex === -1) {
-            return prevMatches
-          }
-
-          const updatedMatches = [...prevMatches]
-          const oldMatch = updatedMatches[matchIndex]
-
-          // Criar novo objeto com todas as propriedades atualizadas
-          const updatedMatch: Match = {
-            ...oldMatch,
-            status: event.data.status as 'scheduled' | 'live' | 'finished'
-          }
-
-          // Se o evento inclui placar, atualizar também
-          if (event.data.homeScore !== undefined && event.data.awayScore !== undefined) {
-            updatedMatch.homeScore = event.data.homeScore
-            updatedMatch.awayScore = event.data.awayScore
-          }
-
-          updatedMatches[matchIndex] = updatedMatch
-
-          return updatedMatches
-        })
-      } else {
-      }
-    }
+    }, 0)
   })
 
   useEffect(() => {
@@ -159,8 +149,17 @@ export default function Matches() {
     return () => clearInterval(interval)
   }, [selectedRound, loadRoundStatus])
 
-  const loadMatches = async () => {
+  const loadMatches = useCallback(async () => {
     if (!selectedRound) return
+
+    // Cancelar operação anterior se existir
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    // Criar novo AbortController para esta operação
+    abortControllerRef.current = new AbortController()
+
     setMatchesLoading(true)
     try {
       // Buscar matches e status em uma única chamada
@@ -190,16 +189,36 @@ export default function Matches() {
         return orderA - orderB;
       })
       
+      // Verificar se a operação foi cancelada
+      if (abortControllerRef.current?.signal.aborted) {
+        return
+      }
+
       setMatches(sorted)
       setExcludedMatches(excluded)
       setAllowsNewBets(allows)
       setIsBlocked(blocked)
     } catch (error) {
-      console.error('Error loading matches:', error)
+      // Não logar erro se foi cancelado
+      if (!(error instanceof Error) || error.name !== 'AbortError') {
+        console.error('Error loading matches:', error)
+      }
     } finally {
-      setMatchesLoading(false)
+      // Só atualizar loading se a operação não foi cancelada
+      if (!abortControllerRef.current?.signal.aborted) {
+        setMatchesLoading(false)
+      }
     }
-  }
+  }, [selectedRound])
+
+  // Cleanup effect para cancelar operações quando o componente desmontar
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   const handleNewPrediction = async () => {
     if (!selectedRound) {
@@ -357,7 +376,11 @@ export default function Matches() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
+                    transition={{
+                      delay: Math.min(index * 0.01, 0.1), // Delay máximo de 0.1s no mobile
+                      duration: 0.2, // Animação mais rápida
+                      ease: "easeOut"
+                    }}
                   >
                     <div className="flex items-center justify-between gap-2">
                       {/* Dia da semana em cima, data e hora embaixo */}
@@ -474,7 +497,7 @@ export default function Matches() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.05 }} // Delay reduzido para resposta mais rápida
             className="mt-6"
           >
             {allowsNewBets && !isBlocked ? (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CheckCircle, Clock, Eye, XCircle, Plus, Users, Info, Lock } from 'lucide-react'
@@ -48,6 +48,9 @@ export default function Tickets() {
   const navigate = useNavigate()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [confirmedTickets, setConfirmedTickets] = useState<Ticket[]>([])
+
+  // AbortController para cancelar operações quando a página muda
+  const abortControllerRef = useRef<AbortController | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [loadingConfirmed, setLoadingConfirmed] = useState(false)
@@ -114,6 +117,14 @@ export default function Tickets() {
   })
 
   const loadPageData = useCallback(async () => {
+    // Cancelar operação anterior se existir
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    // Criar novo AbortController para esta operação
+    abortControllerRef.current = new AbortController()
+
     setPageLoading(true)
     try {
       const user = authService.getCurrentUser()
@@ -140,10 +151,27 @@ export default function Tickets() {
       if (error?.status !== 0 || error?.message?.includes('conexão')) {
         toast.error(error?.message || 'Erro ao carregar dados')
       }
+
+      // Verificar se a operação foi cancelada
+      if (abortControllerRef.current?.signal.aborted) {
+        return
+      }
     } finally {
-      setPageLoading(false)
+      // Só atualizar loading se a operação não foi cancelada
+      if (!abortControllerRef.current?.signal.aborted) {
+        setPageLoading(false)
+      }
     }
   }, [toast])
+
+  // Cleanup effect para cancelar operações quando o componente desmontar
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   const loadRoundStatus = useCallback(async () => {
     if (!selectedRound) {

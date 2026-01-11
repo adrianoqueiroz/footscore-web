@@ -65,7 +65,7 @@ export function RoundSelectorProvider({ children }: { children: ReactNode }) {
   // Carregar rodadas ao montar o provider
   useEffect(() => {
     let isMounted = true
-    
+
     const load = async () => {
       try {
         await loadRounds(false) // Primeira carga: pode selecionar automaticamente
@@ -77,10 +77,12 @@ export function RoundSelectorProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    
-    load()
-    
+
+    // Delay maior para priorizar navegação sobre carregamento inicial
+    const timeoutId = setTimeout(load, 200)
+
     return () => {
+      clearTimeout(timeoutId)
       isMounted = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

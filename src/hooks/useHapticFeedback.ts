@@ -17,50 +17,24 @@ export function useHapticFeedback() {
     if ('vibrate' in navigator) {
       try {
         // Tentar diferentes padrões dependendo do dispositivo
-        // iOS pode precisar de padrões mais longos, mas a API pode não funcionar mesmo assim
+        // Para switches, usamos padrões curtos e rápidos para simular feedback tátil
         let pattern: number | number[]
         
         if (isIOS) {
-          // No iOS, tentar padrões mais longos
-          // Nota: iOS Safari pode não suportar vibrate mesmo assim
-          pattern = type === 'light' ? 50 : type === 'medium' ? 100 : 200
+          // No iOS PWA, usar padrões curtos que podem funcionar melhor
+          // Padrão de vibração rápida similar ao feedback do alarme do iPhone
+          pattern = type === 'light' ? [10, 5, 10] : type === 'medium' ? [15, 5, 15] : [20, 5, 20]
         } else {
-          // Android e outros
-          pattern = type === 'light' ? 10 : type === 'medium' ? 20 : 30
+          // Android e outros - padrões curtos para feedback rápido
+          pattern = type === 'light' ? 10 : type === 'medium' ? 15 : 20
         }
         
         // Tentar vibrar
-        const result = navigator.vibrate(pattern)
-        
-        // Log para debug
-        console.log({
-          type,
-          pattern,
-          isIOS,
-          result,
-          userAgent: navigator.userAgent,
-          hasVibrate: 'vibrate' in navigator
-        })
-        
-        // Se vibrate retornou false, a API não está disponível ou foi bloqueada
-        if (result === false) {
-          console.warn('[Haptic] Vibration API returned false - not supported or blocked')
-        }
-        
-        // Se no iOS e não funcionou, informar sobre limitações
-        if (isIOS && result === false) {
-          console.info('[Haptic] iOS Safari/PWA has limited vibration support. Native haptic feedback requires a native app.')
-        }
+        navigator.vibrate(pattern)
       } catch (error) {
-        console.error('[Haptic] Error triggering vibration:', error)
+        // Silenciosamente falhar se não suportado
+        // Não logar erro para não poluir o console em produção
       }
-    } else {
-      // API não disponível
-      console.warn('[Haptic] Vibration API not available', {
-        hasVibrate: 'vibrate' in navigator,
-        userAgent: navigator.userAgent,
-        platform: navigator.platform
-      })
     }
   }, [])
 

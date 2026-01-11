@@ -89,12 +89,22 @@ function SortableItem({ id, children, isReordering }: { id: string; children: Re
         <div
           {...attributes}
           {...listeners}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-secondary/50 transition-colors"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing touch-none"
+          style={{
+            // Área de toque maior: 48x48px (tamanho mínimo recomendado para toque)
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <div className="p-1 rounded hover:bg-secondary/50 transition-colors">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
         </div>
       )}
-      <div className={isReordering ? 'pl-8' : ''}>
+      <div className={isReordering ? 'pl-12' : ''} style={isReordering ? { touchAction: 'pan-y' } : undefined}>
         {children}
       </div>
     </div>
@@ -155,8 +165,13 @@ export default function EditRound() {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
 
   // Configurar sensores para drag and drop
+  // Usar activationConstraint para evitar conflitos com scroll em dispositivos móveis
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Requer movimento de 8px antes de ativar o drag
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
