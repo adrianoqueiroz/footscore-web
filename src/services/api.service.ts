@@ -34,7 +34,6 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`
     
     try {
-      console.log(`[API] ${options.method || 'GET'} ${endpoint}`)
       const response = await fetch(url, {
         ...options,
         headers,
@@ -55,11 +54,9 @@ class ApiService {
       const contentType = response.headers.get('content-type')
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json()
-        console.log(`[API SUCCESS] ${endpoint}:`, data)
         return data
       }
       
-      console.log(`[API SUCCESS] ${endpoint}: empty response`)
       return {} as T
     } catch (error: any) {
       console.error(`[API CATCH] ${endpoint}:`, error)

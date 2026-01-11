@@ -133,12 +133,10 @@ export default function TicketDetails() {
       const foundTicket = await ticketService.getTicketById(ticketId)
       
       if (foundTicket) {
-        console.log('Ticket loaded:', foundTicket)
         setTicket(foundTicket)
         // Buscar jogos da rodada específica do ticket
         try {
           const roundMatches = await matchService.getMatchesByRound(foundTicket.round)
-          console.log('Matches for round', foundTicket.round, ':', roundMatches)
           if (roundMatches && roundMatches.length > 0) {
             setMatches(roundMatches)
           } else {
@@ -146,7 +144,6 @@ export default function TicketDetails() {
             console.warn('No matches found for round, fetching all matches')
             const allMatches = await matchService.getAllMatches()
             const filtered = allMatches.filter((m: any) => m.round === foundTicket.round)
-            console.log('Filtered matches:', filtered)
             setMatches(filtered)
           }
         } catch (matchError) {
@@ -200,11 +197,9 @@ export default function TicketDetails() {
     let whatsappNumber: string
     try {
       whatsappNumber = await config.getAdminWhatsApp()
-      console.log('[TicketDetails] WhatsApp número do backend:', whatsappNumber)
     } catch (error) {
       console.error('[TicketDetails] Erro ao buscar WhatsApp do backend, usando fallback:', error)
       whatsappNumber = config.getAdminWhatsAppSync() // Fallback para sync
-      console.log('[TicketDetails] WhatsApp número (fallback):', whatsappNumber)
     }
 
     // Mensagem simplificada: apenas código, rodada e nome
@@ -214,7 +209,6 @@ export default function TicketDetails() {
       `*Nome:* ${user.name}`
 
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
-    console.log('[TicketDetails] URL do WhatsApp:', whatsappUrl)
     window.open(whatsappUrl, '_blank')
   }
 

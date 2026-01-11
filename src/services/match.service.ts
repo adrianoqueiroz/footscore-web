@@ -41,12 +41,10 @@ export const matchService = {
       
       // Verificar se a resposta inclui informações da rodada (nova API)
       if (response && typeof response === 'object' && 'matches' in response) {
-        console.log(`Fetched matches for round ${round} (forBetting: ${forBetting}):`, response.matches, `allowsNewBets: ${response.allowsNewBets}`)
         return response.matches
       }
       
       // Resposta antiga (apenas array of matches)
-      console.log(`Fetched matches for round ${round} (forBetting: ${forBetting}):`, response)
       return response as Match[]
     } catch (error) {
       console.error('Error fetching matches by round:', error)

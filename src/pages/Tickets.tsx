@@ -69,7 +69,6 @@ export default function Tickets() {
   usePageVisibility({
     onVisible: () => {
       if (selectedRound) {
-        console.log('[Tickets] Página voltou a ficar visível, recarregando dados...')
         loadPageData()
         if (selectedRound) {
           loadRoundStatus()
@@ -231,8 +230,6 @@ export default function Tickets() {
       // Buscar todos os tickets confirmados da rodada diretamente
       const allConfirmedTickets = await ticketService.getConfirmedTicketsByRound(selectedRound)
       
-      console.log(`[Tickets] Loaded ${allConfirmedTickets.length} confirmed tickets for round ${selectedRound}`)
-      console.log(`[Tickets] Ticket IDs:`, allConfirmedTickets.map(t => ({ id: t.id.slice(-6), userId: t.userId.slice(-6), userName: t.userName })))
       
       // Atualizar contagem
       setConfirmedTicketsCount(allConfirmedTickets.length)

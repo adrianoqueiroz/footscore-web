@@ -33,10 +33,10 @@ export function useHapticFeedback() {
         const result = navigator.vibrate(pattern)
         
         // Log para debug
-        console.log('[Haptic] Attempted:', { 
-          type, 
-          pattern, 
-          isIOS, 
+        console.log({
+          type,
+          pattern,
+          isIOS,
           result,
           userAgent: navigator.userAgent,
           hasVibrate: 'vibrate' in navigator

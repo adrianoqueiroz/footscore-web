@@ -82,8 +82,12 @@ self.addEventListener('activate', (event) => {
 
 // Escutar eventos de push (notificações)
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push event recebido - INÍCIO')
-  console.log('[SW] Event data:', event.data)
+  console.log('[SW] 📨 ===== PUSH EVENT RECEIVED =====')
+  console.log('[SW] 📨 Timestamp:', new Date().toISOString())
+  console.log('[SW] 📨 User Agent:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
+  console.log('[SW] 📨 Data:', event.data ? event.data.text() : 'null')
+  console.log('[SW] 📨 Event properties:', Object.keys(event))
+  console.log('[SW] 📨 User visible only:', event.data ? 'yes' : 'no')
 
   let notificationData = {
     title: '⚽ Gol!',
@@ -155,23 +159,40 @@ self.addEventListener('push', (event) => {
     console.log('[SW] Nenhum dado no push event - usando notificação padrão')
   }
 
-  console.log('[SW] Final notification data:', notificationData)
-  console.log('[SW] Tentando mostrar notificação...')
+  console.log('[SW] 📋 Processing notification for:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
+  console.log('[SW] 📋 Title:', notificationData.title)
+  console.log('[SW] 📋 Body:', notificationData.body)
 
   try {
+    console.log('[SW] 🔄 Calling showNotification...')
     const result = self.registration.showNotification(notificationData.title, notificationData)
-    console.log('[SW] showNotification chamado com sucesso - FIM DO PUSH HANDLER')
+    console.log('[SW] ✅ showNotification called successfully')
     event.waitUntil(result)
+    console.log('[SW] ✅ Notification promise resolved')
   } catch (error) {
-    console.error('[SW] ERRO CRÍTICO ao chamar showNotification:', error)
-    console.error('[SW] Mensagem:', error.message)
-    console.error('[SW] Stack:', error.stack)
+    console.error('[SW] ❌ FAILED TO SHOW NOTIFICATION:', error.message)
+    console.error('[SW] ❌ For browser:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
+    console.error('[SW] ❌ Notification data:', notificationData.title, '-', notificationData.body)
+
+    // Tentar mostrar uma notificação básica se a personalizada falhar
+    try {
+      console.log('[SW] 🔄 Trying basic notification...')
+      const basicNotification = self.registration.showNotification('Teste Básico', {
+        body: 'Fallback notification',
+        icon: '/vite.svg'
+      })
+      event.waitUntil(basicNotification)
+      console.log('[SW] ✅ Basic notification shown as fallback')
+    } catch (fallbackError) {
+      console.error('[SW] ❌ Even basic notification failed:', fallbackError.message)
+    }
   }
 })
 
 // Escutar cliques em notificações
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notificação clicada:', event)
+  console.log('[SW] 👆 Clicked:', event.notification.title)
+  event.notification.close()
   
   // Fechar a notificação imediatamente
   event.notification.close()

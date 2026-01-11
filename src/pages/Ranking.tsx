@@ -57,7 +57,6 @@ export default function Ranking() {
   usePageVisibility({
     onVisible: () => {
       if (selectedRound) {
-        console.log('[Ranking] Página voltou a ficar visível, recarregando dados...')
         loadRanking()
         loadMatches()
       }
@@ -68,7 +67,6 @@ export default function Ranking() {
 
   // Debug: Monitorar mudanças no isRoundFinished
   useEffect(() => {
-    console.log('[Ranking] isRoundFinished mudou para:', isRoundFinished)
     // Forçar re-render do componente quando isRoundFinished muda
     setRanking(prev => [...prev])
   }, [isRoundFinished])
@@ -84,10 +82,8 @@ export default function Ranking() {
         const includedMatches = matchesData.filter(m => m.includeInRound !== false)
         const allFinished = includedMatches.length > 0 && includedMatches.every(m => m.status === 'finished')
 
-        console.log('[Ranking] Status verificado nos jogos:', { allFinished, currentIsRoundFinished: isRoundFinished })
 
         if (allFinished !== isRoundFinished) {
-          console.log(`[Ranking] Corrigindo isRoundFinished: ${isRoundFinished} → ${allFinished}`)
           setIsRoundFinished(allFinished)
           setTimeout(() => setIsRoundFinished(allFinished), 0)
         }
@@ -106,7 +102,6 @@ export default function Ranking() {
     const useRoundFinished = roundFinishedOverride !== undefined ? roundFinishedOverride : isRoundFinished
 
     try {
-      console.log('[Ranking] Buscando ranking atualizado silenciosamente...', { useRoundFinished })
 
       // Sempre buscar com hideNames=true primeiro (nomes mascarados)
       const rankingData = await ticketService.getRanking(selectedRound, true)
@@ -151,7 +146,6 @@ export default function Ranking() {
       // Atualizar o ranking silenciosamente (sem mostrar loading)
       setRanking(processedData)
 
-      console.log('[Ranking] Ranking atualizado silenciosamente')
     } catch (error) {
       console.error('[Ranking] Erro ao atualizar ranking silenciosamente:', error)
       // Em caso de erro, não fazer nada - manter dados atuais
@@ -163,17 +157,14 @@ export default function Ranking() {
   useMatchEvents((event) => {
     // Só processar eventos se houver uma rodada selecionada
     if (!selectedRound) {
-      console.log('[Ranking] Evento ignorado - nenhuma rodada selecionada:', event.type)
       return
     }
 
-    console.log('[Ranking] Evento recebido:', event.type, event.data, 'selectedRound:', selectedRound)
 
     if (event.type === 'score_update') {
       // Para eventos de placar, só atualizar ranking se o placar realmente mudou
       const eventRound = Number(event.data.round)
       if (selectedRound === eventRound && event.data.scoreChanged) {
-        console.log('[Ranking] Atualizando ranking por mudança de placar')
         updateRankingSilently()
       }
 
@@ -207,10 +198,9 @@ export default function Ranking() {
     } else if (event.type === 'round_status_update') {
       // Evento único com estado completo da rodada
       const eventRound = Number(event.data.round)
-      console.log('[Ranking] Evento round_status_update recebido:', event.data, 'selectedRound:', selectedRound, 'eventRound:', eventRound)
       
       if (selectedRound === eventRound) {
-        console.log('[Ranking] Atualizando estado completo da rodada:', {
+        setRoundStatusUpdateEvent({
           isFinished: event.data.isFinished,
           hasLiveMatches: event.data.hasLiveMatches,
           hasScheduledMatches: event.data.hasScheduledMatches,
@@ -228,15 +218,11 @@ export default function Ranking() {
         // Atualizar ranking silenciosamente com dados corretos
         // Isso garante que cores dos cards e nomes estejam sempre sincronizados
         updateRankingSilently(event.data.isFinished)
-      } else {
-        console.log('[Ranking] Evento ignorado - rodada não corresponde')
       }
     } else if (event.type === 'round_finished') {
       // Manter handlers antigos para compatibilidade (mas não devem ser usados)
       const eventRound = Number(event.data.round)
-      console.log('[Ranking] Evento round_finished recebido (legado):', event.data, 'selectedRound:', selectedRound, 'eventRound:', eventRound)
       if (selectedRound === eventRound) {
-        console.log('[Ranking] Usando handler legado - considerar migrar para round_status_update')
         setShowPulsingBall(false)
         setIsRoundFinished(true)
         updateRankingSilently(true)
@@ -244,9 +230,7 @@ export default function Ranking() {
     } else if (event.type === 'round_unfinished') {
       // Manter handlers antigos para compatibilidade (mas não devem ser usados)
       const eventRound = Number(event.data.round)
-      console.log('[Ranking] Evento round_unfinished recebido (legado):', event.data, 'selectedRound:', selectedRound, 'eventRound:', eventRound)
       if (selectedRound === eventRound) {
-        console.log('[Ranking] Usando handler legado - considerar migrar para round_status_update')
         setShowPulsingBall(false)
         setIsRoundFinished(false)
         updateRankingSilently(false)
@@ -364,7 +348,6 @@ export default function Ranking() {
 
       // Se mudou de true para false (primeiro jogo começou), recarregar ranking
       if (wasAllScheduled && !allScheduled) {
-        console.log('[Ranking] Primeiro jogo começou, recarregando ranking...')
         loadRanking()
       }
     } catch (error) {
@@ -546,7 +529,6 @@ export default function Ranking() {
               const isWinner = pos === 1 && isRoundFinished
               const isLeader = pos === 1 && !isRoundFinished
 
-              console.log(`[Ranking] Render position ${pos}: isRoundFinished=${isRoundFinished}, isWinner=${isWinner}, isLeader=${isLeader}`)
 
               // Determinar classes CSS baseadas no status
               const cardClasses = isWinner

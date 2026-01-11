@@ -108,7 +108,6 @@ export default function EditRound() {
   
   // Debug: monitorar mudanças no array rounds
   useEffect(() => {
-    console.log('[EditRound] Estado rounds atualizado:', rounds.length, rounds)
   }, [rounds])
   const [roundsLoading, setRoundsLoading] = useState(true)
   const [matches, setMatches] = useState<MatchWithInclude[]>([])
@@ -172,7 +171,6 @@ export default function EditRound() {
         // Garantir que todas as rodadas sejam armazenadas (não filtrar)
         // Ordenar as rodadas para garantir ordem correta
         const sortedRounds = [...roundsData].sort((a, b) => a - b)
-        console.log('[EditRound] Carregando rodadas - Total:', sortedRounds.length, 'Rodadas:', sortedRounds)
         setRounds(sortedRounds)
         
         // Sempre atualizar o array de rodadas, independente de ter rodada selecionada
@@ -590,7 +588,6 @@ export default function EditRound() {
       // Recarregar rodadas e selecionar a primeira disponível
       const roundsData = await matchService.getAllRounds()
       const sortedRounds = [...roundsData].sort((a, b) => a - b)
-      console.log('[EditRound] Rodadas recarregadas após deletar:', sortedRounds.length, sortedRounds)
       setRounds(sortedRounds)
       if (sortedRounds.length > 0) {
         setSelectedRound(sortedRounds[0])
@@ -761,7 +758,6 @@ export default function EditRound() {
       }
 
       // Debug: verificar se todos os includeInRound são boolean
-      console.log('Payload sendo enviado:', JSON.stringify(payload, null, 2))
       const allBooleans = payload.matches.every(m => typeof m.includeInRound === 'boolean')
       if (!allBooleans) {
         console.error('Erro: nem todos os includeInRound são boolean!', payload.matches)
@@ -1911,7 +1907,6 @@ export default function EditRound() {
                       try {
                         const roundsData = await matchService.getAllRounds()
                         const sortedRounds = [...roundsData].sort((a, b) => a - b)
-                        console.log('[EditRound] Recarregando rodadas ao abrir dropdown - Total:', sortedRounds.length, 'Rodadas:', sortedRounds)
                         setRounds(sortedRounds)
                       } catch (error) {
                         console.error('Error reloading rounds:', error)

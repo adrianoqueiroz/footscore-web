@@ -30,12 +30,9 @@ export default function Matches() {
 
   // Conectar ao SSE para receber atualizações de placar e status
   useMatchEvents((event) => {
-    console.log('[Matches] ===== EVENTO RECEBIDO =====')
-    console.log('[Matches] Evento recebido:', event.type, 'data:', event.data)
 
     // Só processar eventos se houver uma rodada selecionada
     if (!selectedRound) {
-      console.log('[Matches] Evento ignorado - nenhuma rodada selecionada:', event.type)
       return
     }
 
@@ -76,16 +73,9 @@ export default function Matches() {
           // Atualizar matchInfo primeiro
           setLastScoreUpdate(matchInfo)
 
-          // Aguardar um pouco para garantir que o estado foi atualizado, depois mostrar
-          // Usar requestAnimationFrame para garantir que o estado foi atualizado
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              setShowPulsingBall(false)
-              setTimeout(() => {
-                setShowPulsingBall(true)
-              }, 20)
-            })
-          })
+          // Mostrar bola pulsando
+          setShowPulsingBall(false)
+          setTimeout(() => setShowPulsingBall(true), 20)
         }
       }
     } else if (event.type === 'match_status_update') {
@@ -94,7 +84,6 @@ export default function Matches() {
 
       // Verificar se o jogo pertence à rodada selecionada
       if (selectedRound === eventRound) {
-        console.log('[Matches] Atualizando status do jogo:', event.data.matchId, 'novo status:', event.data.status)
 
         // Atualizar o estado matches para refletir a mudança de status
         setMatches(prevMatches => {
@@ -123,7 +112,6 @@ export default function Matches() {
           return updatedMatches
         })
       } else {
-        console.log('[Matches] Evento ignorado - rodada não corresponde')
       }
     }
   })

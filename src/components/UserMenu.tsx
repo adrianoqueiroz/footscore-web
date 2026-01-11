@@ -46,7 +46,6 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
     try {
       const updatedUser = await authService.refreshUser()
       if (updatedUser?.avatar && updatedUser.avatar !== userAvatar) {
-        console.log('[UserMenu] Avatar atualizado do servidor')
         // O hook será atualizado automaticamente quando userAvatar mudar
       }
     } catch (error) {

@@ -1097,105 +1097,61 @@ export default function AdminUpdateGames() {
 
         {/* Modal de edição de data e hora */}
         {showDateTimeModal && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 10000,
-              padding: '20px'
-            }}
-            onClick={() => setShowDateTimeModal(false)}
-          >
-            <div
-              style={{
-                backgroundColor: 'white',
-                border: '1px solid #ccc',
-                borderRadius: '8px',
-                padding: '24px',
-                maxWidth: '400px',
-                width: '100%',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-                Editar Data e Hora
-              </h2>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full shadow-xl backdrop-blur-sm">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">
+                    Editar Data e Hora
+                  </h3>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#666' }}>
-                  Data
-                </label>
-                <input
-                  type="date"
-                  value={tempDate}
-                  onChange={(e) => setTempDate(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">
+                        Data
+                      </label>
+                      <input
+                        type="date"
+                        value={tempDate}
+                        onChange={(e) => setTempDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">
+                        Hora
+                      </label>
+                      <select
+                        value={tempTime}
+                        onChange={(e) => setTempTime(e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="">Selecione</option>
+                        {config.getGameTimesSync().map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#666' }}>
-                  Hora
-                </label>
-                <select
-                  value={tempTime}
-                  onChange={(e) => setTempTime(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="">Selecione</option>
-                  {config.getGameTimesSync().map(time => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                <button
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="outline"
                   onClick={() => setShowDateTimeModal(false)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#666',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
+                  className="flex-1"
                 >
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={handleSaveDateTime}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
+                  className="flex-1"
                 >
                   Salvar
-                </button>
+                </Button>
               </div>
             </div>
           </div>

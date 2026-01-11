@@ -22,13 +22,20 @@ export function usePushNotifications() {
     }
 
     try {
+      console.log('[PushNotifications] 🔍 Checking subscription status...')
       const registration = await navigator.serviceWorker.ready
       const subscription = await registration.pushManager.getSubscription()
       const hasSubscription = !!subscription
+
+      console.log('[PushNotifications] 📊 Subscription status:', hasSubscription ? 'YES' : 'NO')
+      if (subscription) {
+        console.log('[PushNotifications] 📡 Endpoint:', subscription.endpoint.substring(0, 40) + '...')
+      }
+
       setIsSubscribed(hasSubscription)
       return hasSubscription
     } catch (error) {
-      console.error('[PushNotifications] Erro ao verificar subscription:', error)
+      console.error('[PushNotifications] Status check error:', error.message)
       setIsSubscribed(false)
       return false
     }
@@ -150,6 +157,7 @@ export function usePushNotifications() {
       }
 
       // Obter VAPID key do backend
+      console.log('[PushNotifications] 🔑 Obtendo VAPID key...')
       const { publicKey } = await apiService.get<{ publicKey: string }>('/notifications/vapid-key')
       const applicationServerKey = Uint8Array.from(atob(publicKey), c => c.charCodeAt(0))
 

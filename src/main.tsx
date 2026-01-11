@@ -9,17 +9,27 @@ import './mobile.css'
 // Registrar service worker para PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    console.log('[SW] 🔄 Starting SW registration...')
+
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then((registration) => {
-        console.log('Service Worker registrado com sucesso:', registration.scope)
+        console.log('[SW] ✅ Registered successfully:', registration.scope)
+        console.log('[SW] 📊 State:', registration.active ? 'active' : 'installing')
+        console.log('[SW] 🌐 Browser:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
 
-        // Forçar atualização imediata
-        registration.update().then(() => {
-          console.log('Service Worker atualizado')
+        registration.update().catch((error) => {
+          console.log('[SW] ❌ Update error:', error.message)
         })
+
+        // Verificar se tem push manager
+        if ('pushManager' in registration) {
+          console.log('[SW] ✅ Push Manager available')
+        } else {
+          console.log('[SW] ❌ Push Manager not available')
+        }
       })
       .catch((error) => {
-        console.log('Falha ao registrar Service Worker:', error)
+        console.log('[SW] ❌ Registration failed:', error.message)
       })
   })
 }

@@ -127,7 +127,6 @@ export const authService = {
       const user = JSON.parse(userStr) as User
       // Converter isAdmin de 1/0 para boolean se necessário (pode estar salvo como número)
       user.isAdmin = Boolean(user.isAdmin === 1 || user.isAdmin === true)
-      console.log('getCurrentUser:', user)
       return user
     } catch (error) {
       console.error("Error parsing user data from localStorage:", error)

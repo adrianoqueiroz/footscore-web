@@ -16,6 +16,7 @@ import AdminUpdateGames from '@/pages/AdminUpdateGames'
 import AdminManagePalpites from '@/pages/AdminManagePalpites'
 import AdminManageUsers from '@/pages/AdminManageUsers'
 import AdminSettings from '@/pages/AdminSettings'
+import DebugPush from '@/pages/DebugPush'
 import EditRound from '@/pages/EditRound'
 import EditPhone from '@/pages/EditPhone'
 import Profile from '@/pages/Profile'
@@ -36,7 +37,6 @@ const AdminRoute = () => {
     // Usar um pequeno delay para evitar flash de loading muito rápido
     const timer = setTimeout(() => {
       const currentUser = authService.getCurrentUser()
-      console.log('AdminRoute - currentUser:', currentUser)
       if (currentUser) {
         setUser(currentUser)
       }
@@ -46,7 +46,6 @@ const AdminRoute = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  console.log('AdminRoute render:', { loading, user, isAdmin: user?.isAdmin })
 
   if (loading) {
     return (
@@ -68,7 +67,6 @@ const AdminRoute = () => {
   }
 
   if (!user || !user.isAdmin) {
-    console.log('AdminRoute - redirecting to /rounds')
     return <Navigate to="/rounds" />
   }
 
@@ -93,6 +91,7 @@ const AppRoutes = () => {
                   <Route path="/tickets" element={<Tickets />} />
                   <Route path="/tickets/:ticketId" element={<TicketDetails />} />
                   <Route path="/ranking" element={<Ranking />} />
+                  <Route path="/debug-push" element={<DebugPush />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/edit-phone" element={<EditPhone />} />
                   <Route path="/profile" element={<Profile />} />

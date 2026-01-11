@@ -86,7 +86,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
   const connect = useCallback(() => {
     // Evitar múltiplas conexões simultâneas
     if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
-      console.log('[useMatchEvents] Conexão SSE já existe, reutilizando')
       return
     }
 
@@ -113,12 +112,9 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
 
       // Usar onmessage para capturar todos os eventos e despachar manualmente
       eventSource.onmessage = (event) => {
-        console.log('[useMatchEvents] onmessage recebeu:', event)
         try {
           const data = JSON.parse(event.data)
-          console.log('[useMatchEvents] Dados parseados:', data)
           if (data.type === 'match_status_update') {
-            console.log('[useMatchEvents] Processando match_status_update')
             const matchStatusUpdateEvent: MatchStatusUpdateEvent = {
               type: 'match_status_update',
               data: data.data,
@@ -129,7 +125,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
               callbackRef.current(matchStatusUpdateEvent)
             }
           } else if (data.type === 'round_status_update') {
-            console.log('[useMatchEvents] Processando round_status_update')
             const roundStatusUpdateEvent: RoundStatusUpdateEvent = {
               type: 'round_status_update',
               data: data.data,
@@ -140,7 +135,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
               callbackRef.current(roundStatusUpdateEvent)
             }
           } else {
-            console.log('[useMatchEvents] Tipo de evento desconhecido:', data.type)
           }
         } catch (error) {
           console.error('[useMatchEvents] Erro ao processar evento SSE:', error, 'Dados:', event.data)
@@ -149,20 +143,15 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
 
       // Manter event listeners específicos também para garantir
       eventSource.addEventListener('match_status_update', (event: MessageEvent) => {
-        console.log('[useMatchEvents] Event listener match_status_update recebeu:', event)
-        console.log('[useMatchEvents] Dados crus:', event.data)
         try {
           const data = JSON.parse(event.data)
-          console.log('[useMatchEvents] Dados parseados:', data)
           const matchStatusUpdateEvent: MatchStatusUpdateEvent = {
             type: 'match_status_update',
             data: data.data,
             timestamp: data.timestamp,
           }
-          console.log('[useMatchEvents] Evento criado:', matchStatusUpdateEvent)
           setLastEvent(matchStatusUpdateEvent)
           if (callbackRef.current) {
-            console.log('[useMatchEvents] Chamando callback com match_status_update')
             callbackRef.current(matchStatusUpdateEvent)
           } else {
             console.warn('[useMatchEvents] Callback não disponível para match_status_update')
@@ -173,7 +162,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
       })
 
       eventSource.addEventListener('round_status_update', (event: MessageEvent) => {
-        console.log('[useMatchEvents] Event listener round_status_update recebeu:', event)
         try {
           const data = JSON.parse(event.data)
           const roundStatusUpdateEvent: RoundStatusUpdateEvent = {
@@ -217,7 +205,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
             timestamp: data.timestamp,
           }
 
-          console.log('[useMatchEvents] Evento recebido:', scoreUpdateEvent)
           setLastEvent(scoreUpdateEvent)
 
           // Chamar callback usando ref (sempre tem a versão mais recente)
@@ -239,7 +226,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
             timestamp: data.timestamp,
           }
 
-          console.log('[useMatchEvents] Rodada finalizada recebida:', roundFinishedEvent)
           setLastEvent(roundFinishedEvent)
 
           // Chamar callback usando ref (sempre tem a versão mais recente)
@@ -261,7 +247,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
             timestamp: data.timestamp,
           }
 
-          console.log('[useMatchEvents] Rodada não finalizada recebida:', roundUnfinishedEvent)
           setLastEvent(roundUnfinishedEvent)
 
           // Chamar callback usando ref (sempre tem a versão mais recente)
@@ -283,7 +268,6 @@ export function useMatchEvents(onScoreUpdate?: EventHandler) {
             timestamp: data.timestamp,
           }
 
-          console.log('[useMatchEvents] Atualização de status da rodada recebida:', roundStatusUpdateEvent)
           setLastEvent(roundStatusUpdateEvent)
 
           // Chamar callback usando ref (sempre tem a versão mais recente)

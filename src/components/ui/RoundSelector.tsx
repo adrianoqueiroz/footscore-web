@@ -19,7 +19,6 @@ export default function RoundSelector({ rounds, selectedRound, onRoundChange, on
 
   // Debug: verificar se o array rounds está sendo recebido
   useEffect(() => {
-    console.log('[RoundSelector] Props recebidas - rounds.length:', rounds.length, 'rounds:', rounds, 'selectedRound:', selectedRound)
   }, [rounds, selectedRound])
 
   const handleToggle = (e?: React.MouseEvent) => {
@@ -103,7 +102,6 @@ export default function RoundSelector({ rounds, selectedRound, onRoundChange, on
                 </li>
               ) : (
                 rounds.map(round => {
-                  console.log('[RoundSelector] Renderizando rodada:', round)
                   return (
                     <li
                       key={round}
