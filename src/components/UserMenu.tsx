@@ -20,7 +20,15 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
   const { avatarUrl: cachedAvatar, isLoading: avatarLoading, error: avatarError, refresh: refreshAvatar } = useAvatarCache(userAvatar)
 
   // Push notifications
-  const { subscribe: subscribePush, unsubscribe: unsubscribePush, isSubscribed: isPushSubscribed, isSupported: pushSupported, permission: pushPermission } = usePushNotifications()
+  const { 
+    subscribe: subscribePush, 
+    unsubscribe: unsubscribePush, 
+    isSubscribed: isPushSubscribed, 
+    isSupported: pushSupported, 
+    permission: pushPermission,
+    isLoading: pushLoading,
+    requestPermission: requestPushPermission
+  } = usePushNotifications()
 
 
   // Pega as iniciais do nome
@@ -127,51 +135,55 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
               </motion.button>
 
               {/* Push Notifications */}
-              {console.log('[UserMenu] Renderizando botão push:', { pushSupported, isPushSubscribed }) || pushSupported && (
+              {pushSupported && (
                 <motion.button
                   onClick={async () => {
-                    console.log('[UserMenu] Botão clicado!')
                     setIsOpen(false)
 
                     try {
                       if (isPushSubscribed) {
-                        console.log('[UserMenu] Desativando...')
+                        // Desativar notificações
                         const success = await unsubscribePush()
-                        console.log('[UserMenu] Desativação result:', success)
-                        if (success) {
-                          alert('✅ Notificações desativadas!')
-                        } else {
-                          alert('❌ Erro ao desativar notificações')
+                        if (!success) {
+                          console.error('[UserMenu] Falha ao desativar notificações')
                         }
                       } else {
-                        console.log('[UserMenu] Ativando...')
-                        console.log('[UserMenu] Permissão atual:', Notification.permission)
-
+                        // Ativar notificações
                         // Verificar permissão primeiro
-                        if (Notification.permission === 'denied') {
+                        if (pushPermission === 'denied') {
                           alert('Permissão negada. Vá nas configurações do navegador para permitir notificações.')
                           return
                         }
 
-                        console.log('[UserMenu] Chamando subscribePush...')
-                        const success = await subscribePush()
-                        console.log('[UserMenu] subscribePush result:', success)
+                        // Se permissão não foi concedida, solicitar
+                        if (pushPermission !== 'granted') {
+                          const granted = await requestPushPermission()
+                          if (!granted) {
+                            return
+                          }
+                        }
 
-                        if (success) {
-                          alert('✅ Notificações ativadas com sucesso!')
-                        } else {
-                          alert('❌ Falha ao ativar notificações. Verifique o console (F12) para mais detalhes.')
+                        // Fazer subscribe
+                        const success = await subscribePush()
+                        if (!success) {
+                          console.error('[UserMenu] Falha ao ativar notificações')
                         }
                       }
-                    } catch (error) {
-                      console.error('[UserMenu] Erro no botão:', error)
-                      alert('❌ Erro interno: ' + error.message)
+                    } catch (error: any) {
+                      console.error('[UserMenu] Erro ao gerenciar notificações:', error)
+                      alert('❌ Erro: ' + (error?.message || 'Erro desconhecido'))
                     }
                   }}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition-colors"
+                  disabled={pushLoading}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ x: 4 }}
                 >
-                  {isPushSubscribed ? (
+                  {pushLoading ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      <span>Processando...</span>
+                    </>
+                  ) : isPushSubscribed ? (
                     <>
                       <BellOff className="h-4 w-4 text-orange-500" />
                       <span className="text-orange-500">Desativar Notificações</span>
@@ -185,210 +197,6 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
                 </motion.button>
               )}
 
-              {/* Debug Info */}
-              <div className="px-3 py-1 text-xs text-muted-foreground border-t border-border">
-                Push: {pushSupported ? '✅' : '❌'} | Perm: {pushPermission} | Sub: {isPushSubscribed ? '✅' : '❌'}
-                <div className="flex gap-1 mt-1">
-                  <button
-                    onClick={() => {
-                      console.log('=== DEBUG INFO ===')
-                      console.log('Supported:', pushSupported)
-                      console.log('Permission:', pushPermission)
-                      console.log('Subscribed:', isPushSubscribed)
-                      console.log('SW:', !!navigator.serviceWorker)
-                      console.log('PushManager:', !!window.PushManager)
-                      console.log('Notification:', !!window.Notification)
-                      console.log('Notification.permission:', Notification.permission)
-                      alert('Verifique o console do navegador (F12)')
-                    }}
-                    className="text-blue-500 hover:text-blue-700 text-xs"
-                  >
-                    Debug
-                  </button>
-                  <button
-                    onClick={async () => {
-                      console.log('=== DIAGNÓSTICO COMPLETO ===')
-
-                      // Verificar permissões básicas
-                      console.log('🔔 Permissões:', {
-                        notification: Notification.permission,
-                        supported: 'Notification' in window,
-                        serviceWorker: 'serviceWorker' in navigator
-                      })
-
-                      // Verificar service worker detalhado
-                      if ('serviceWorker' in navigator) {
-                        try {
-                          const registration = await navigator.serviceWorker.ready
-                          console.log('👷 Service Worker detalhado:', {
-                            active: !!registration.active,
-                            installing: !!registration.installing,
-                            waiting: !!registration.waiting,
-                            scope: registration.scope,
-                            updateViaCache: registration.updateViaCache
-                          })
-
-                          // Testar notificação via Notification API
-                          console.log('🔔 Testando Notification API direto...')
-                          if (Notification.permission === 'granted') {
-                            try {
-                              const notification = new Notification('Teste Direto', {
-                                body: 'Notificação direta da Notification API',
-                                icon: '/vite.svg',
-                                tag: 'direct-test'
-                              })
-                              console.log('✅ Notificação direta criada')
-                            } catch (directError) {
-                              console.error('❌ Erro na notificação direta:', directError)
-                            }
-                          } else {
-                            console.log('❌ Permissão de notificação não concedida')
-                          }
-
-                          // Testar notificação via Service Worker
-                          console.log('🔔 Testando notificação via SW...')
-                          try {
-                            await registration.showNotification('Teste SW', {
-                              body: 'Notificação via Service Worker',
-                              icon: '/vite.svg',
-                              tag: 'sw-test'
-                            })
-                            console.log('✅ Notificação SW enviada')
-                          } catch (swError) {
-                            console.error('❌ Erro na notificação SW:', swError)
-                          }
-
-                        } catch (swError) {
-                          console.error('❌ Erro no service worker:', swError)
-                        }
-                      } else {
-                        console.log('❌ Service Worker não suportado')
-                      }
-
-                      // Verificar autenticação
-                      const authToken = localStorage.getItem('auth_token')
-                      const userData = localStorage.getItem('bolao_user')
-
-                      console.log('🔐 Token JWT existe:', !!authToken)
-                      console.log('👤 Usuário logado:', !!userData)
-
-                      if (userData) {
-                        try {
-                          const user = JSON.parse(userData)
-                          console.log('👤 User ID:', user.id)
-                          console.log('📧 User email:', user.email)
-                        } catch (e) {
-                          console.log('❌ Erro ao parsear dados do usuário')
-                        }
-                      }
-
-                      if (Notification.permission === 'denied') {
-                        alert('Permissão negada. Vá nas configurações do navegador para reverter.')
-                        return
-                      }
-
-                      try {
-                        // Testar API VAPID
-                        console.log('🔑 Testando API VAPID...')
-                        const vapidResponse = await fetch('http://localhost:3000/api/notifications/vapid-key')
-                        const vapidData = await vapidResponse.json()
-                        console.log('🔑 VAPID API:', vapidResponse.ok ? '✅ OK' : '❌ Falhou')
-
-                        if (vapidResponse.ok) {
-                          // Testar subscribe
-                          console.log('📡 Testando PushManager.subscribe...')
-                          try {
-                            const reg = await navigator.serviceWorker.ready
-                            console.log('📡 SW ready, obtendo registration...')
-
-                            // Verificar se já existe uma subscription
-                            const existingSub = await reg.pushManager.getSubscription()
-                            if (existingSub) {
-                              console.log('📡 Já existe subscription, cancelando...')
-                              await existingSub.unsubscribe()
-                              console.log('📡 Subscription antiga cancelada')
-                            }
-
-                            console.log('📡 Fazendo nova subscription...')
-                            console.log('📡 VAPID key length:', vapidData.publicKey.length)
-                            console.log('📡 VAPID key starts with:', vapidData.publicKey.substring(0, 20))
-
-                            // Criar timeout para o subscribe
-                            const subscribePromise = reg.pushManager.subscribe({
-                              userVisibleOnly: true,
-                              applicationServerKey: Uint8Array.from(atob(vapidData.publicKey), c => c.charCodeAt(0))
-                            })
-
-                            const timeoutPromise = new Promise((_, reject) => {
-                              setTimeout(() => reject(new Error('Subscribe timeout')), 10000)
-                            })
-
-                            let sub;
-                            try {
-                              sub = await Promise.race([subscribePromise, timeoutPromise])
-                              console.log('📡 Subscribe result:', !!sub ? '✅ Sucesso' : '❌ Falhou')
-                              console.log('📡 Subscription type:', typeof sub)
-                              console.log('📡 Subscription keys:', sub ? 'disponíveis' : 'null')
-
-                              if (sub) {
-                                console.log('📡 Endpoint:', sub.endpoint.substring(0, 50) + '...')
-                                console.log('📡 Keys disponíveis:', !!sub.getKey('p256dh'), !!sub.getKey('auth'))
-
-                                // Testar registro no backend
-                                console.log('🔄 Testando registro no backend...')
-                                const p256dhKey = sub.getKey('p256dh')
-                                const authKey = sub.getKey('auth')
-
-                                if (!p256dhKey || !authKey) {
-                                  console.log('🔄 ERRO: Keys não disponíveis na subscription')
-                                  return
-                                }
-
-                                const registerResponse = await fetch('http://localhost:3000/api/notifications/subscribe', {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': authToken ? `Bearer ${authToken}` : ''
-                                  },
-                                  body: JSON.stringify({
-                                    endpoint: sub.endpoint,
-                                    keys: {
-                                      p256dh: btoa(String.fromCharCode(...new Uint8Array(p256dhKey))),
-                                      auth: btoa(String.fromCharCode(...new Uint8Array(authKey)))
-                                    }
-                                  })
-                                })
-
-                                console.log('🔄 Backend status:', registerResponse.status)
-                                if (registerResponse.ok) {
-                                  const result = await registerResponse.json()
-                                  console.log('🔄 Backend result:', result)
-                                  console.log('🎉 SUCESSO COMPLETO! Push notifications configuradas.')
-                                } else {
-                                  const error = await registerResponse.json()
-                                  console.log('🔄 Backend error:', error)
-                                }
-                              }
-                            } catch (innerError) {
-                              console.error('📡 ERRO no subscribe interno:', innerError)
-                              console.error('📡 Detalhes:', innerError.message)
-                            }
-                          } catch (subscribeError) {
-                            console.error('📡 ERRO no PushManager.subscribe:', subscribeError)
-                            console.error('📡 Detalhes:', subscribeError.message)
-                          }
-                        }
-                      } catch (error) {
-                        console.error('💥 Erro completo:', error)
-                      }
-                      alert('Diagnóstico concluído - verifique console (F12)')
-                    }}
-                    className="text-green-500 hover:text-green-700 text-xs"
-                  >
-                    Teste
-                  </button>
-                </div>
-              </div>
 
               <div className="border-t border-border my-1"></div>
 

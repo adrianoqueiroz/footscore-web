@@ -173,26 +173,51 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notificação clicada:', event)
   
+  // Fechar a notificação imediatamente
   event.notification.close()
 
+  // Obter URL de destino dos dados da notificação ou usar padrão
   const urlToOpen = event.notification.data?.url || '/'
+  const baseUrl = self.location.origin
+  const fullUrl = `${baseUrl}${urlToOpen}`
 
   event.waitUntil(
     clients.matchAll({
       type: 'window',
       includeUncontrolled: true
     }).then((clientList) => {
-      // Se já existe uma janela aberta, focar nela
+      // Tentar encontrar uma janela que já está aberta na mesma origem
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i]
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
-          return client.focus()
+        if (client.url.startsWith(baseUrl)) {
+          // Se encontrou uma janela da mesma origem, focar nela
+          if ('focus' in client) {
+            client.focus()
+            // Enviar mensagem para o cliente navegar se necessário
+            if (client.url !== fullUrl) {
+              client.postMessage({
+                type: 'navigate',
+                url: urlToOpen
+              })
+            }
+            return Promise.resolve()
+          }
         }
       }
-      // Se não, abrir nova janela
+      
+      // Se não encontrou janela aberta, abrir nova
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen)
+        return clients.openWindow(fullUrl)
       }
+      
+      return Promise.resolve()
+    }).catch((error) => {
+      console.error('[SW] Erro ao processar clique na notificação:', error)
+      // Tentar abrir janela mesmo com erro
+      if (clients.openWindow) {
+        return clients.openWindow(fullUrl)
+      }
+      return Promise.resolve()
     })
   )
 })

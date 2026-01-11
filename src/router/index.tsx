@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { authService } from '@/services/auth.service'
 import { User } from '@/types'
 import Login from '@/pages/Login'
@@ -164,7 +164,26 @@ const PrivateRoute = () => {
 }
 
 const MainLayout = ({ user }: { user: User }) => {
+  const navigate = useNavigate()
   usePWANavigation()
+
+  // Listener para mensagens do service worker (navegação via push notification)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'navigate') {
+          console.log('[Router] Navegando via SW message:', event.data.url)
+          navigate(event.data.url)
+        }
+      }
+
+      navigator.serviceWorker.addEventListener('message', handleMessage)
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleMessage)
+      }
+    }
+  }, [navigate])
 
   return (
     <div className="flex flex-col h-full bg-background md:flex-row">
