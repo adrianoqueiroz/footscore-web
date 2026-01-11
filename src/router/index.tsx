@@ -11,6 +11,11 @@ import Tickets from '@/pages/Tickets'
 import TicketDetails from '@/pages/TicketDetails'
 import Ranking from '@/pages/Ranking'
 import Admin from '@/pages/Admin'
+import AdminCreateRound from '@/pages/AdminCreateRound'
+import AdminUpdateGames from '@/pages/AdminUpdateGames'
+import AdminManagePalpites from '@/pages/AdminManagePalpites'
+import AdminManageUsers from '@/pages/AdminManageUsers'
+import AdminSettings from '@/pages/AdminSettings'
 import EditRound from '@/pages/EditRound'
 import EditPhone from '@/pages/EditPhone'
 import Profile from '@/pages/Profile'
@@ -21,6 +26,7 @@ import { usePWANavigation } from '@/hooks/usePWANavigation'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ConfirmProvider } from '@/contexts/ConfirmContext'
 import { RoundSelectorProvider } from '@/contexts/RoundSelectorContext'
+import { ConnectionProvider } from '@/contexts/ConnectionContext'
 
 const AdminRoute = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -69,8 +75,6 @@ const AdminRoute = () => {
   return <Outlet />
 }
 
-import { ConnectionProvider } from '@/contexts/ConnectionContext'
-
 const AppRoutes = () => {
   return (
     <ConnectionProvider>
@@ -94,6 +98,11 @@ const AppRoutes = () => {
                   <Route path="/profile" element={<Profile />} />
                   <Route element={<AdminRoute />}>
                     <Route path="/admin" element={<Admin />} />
+                    <Route path="/admin/create-round" element={<AdminCreateRound />} />
+                    <Route path="/admin/update-games" element={<AdminUpdateGames />} />
+                    <Route path="/admin/manage-palpites" element={<AdminManagePalpites />} />
+                    <Route path="/admin/manage-users" element={<AdminManageUsers />} />
+                    <Route path="/admin/settings" element={<AdminSettings />} />
                     <Route path="/edit-round" element={<EditRound />} />
                   </Route>
                   <Route path="/" element={<Navigate to="/rounds" replace />} />
