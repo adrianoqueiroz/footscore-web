@@ -24,6 +24,8 @@ import About from '@/pages/About'
 import AppHeader from '@/components/AppHeader'
 import BottomNav from '@/components/ui/BottomNav'
 import { usePWANavigation } from '@/hooks/usePWANavigation'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import PullToRefreshIndicator from '@/components/ui/PullToRefreshIndicator'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ConfirmProvider } from '@/contexts/ConfirmContext'
 import { RoundSelectorProvider } from '@/contexts/RoundSelectorContext'
@@ -165,6 +167,7 @@ const PrivateRoute = () => {
 const MainLayout = ({ user }: { user: User }) => {
   const navigate = useNavigate()
   usePWANavigation()
+  const pullToRefreshState = usePullToRefresh()
 
   // Listener para mensagens do service worker (navegação via push notification)
   useEffect(() => {
@@ -188,13 +191,21 @@ const MainLayout = ({ user }: { user: User }) => {
     <div className="flex flex-col h-full bg-background md:flex-row">
       <AppHeader />
       <BottomNav isAdmin={!!user?.isAdmin} />
-      <main className="flex-1 pb-20 md:pb-0 md:ml-64 md:pt-16 md:pl-0" style={{ 
+      <main className="flex-1 pb-20 md:pb-0 md:ml-64 md:pt-16 md:pl-0" style={{
         minHeight: 0,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
       }}>
         <Outlet />
       </main>
+
+      {/* Indicador visual de pull-to-refresh */}
+      <PullToRefreshIndicator
+        isPulling={pullToRefreshState.isPulling}
+        pullDistance={pullToRefreshState.pullDistance}
+        canRefresh={pullToRefreshState.canRefresh}
+        isReloading={pullToRefreshState.isReloading}
+      />
     </div>
   )
 }
