@@ -399,11 +399,13 @@ export default function AdminUpdateGames() {
     setSavingAllowsNewBets(true)
     try {
       await matchService.updateRoundAllowsNewBets(selectedRound, newValue)
-      setAllowsNewBets(newValue)
+      // Recarregar dados do backend para garantir sincronização
+      await loadUpdateGamesMatches(selectedRound)
     } catch (error) {
       console.error('Error updating allowsNewBets:', error)
       toast.error('Erro ao atualizar. Tente novamente.')
-      setAllowsNewBets(!newValue)
+      // Recarregar dados do backend em caso de erro para garantir estado correto
+      await loadUpdateGamesMatches(selectedRound)
     } finally {
       setSavingAllowsNewBets(false)
     }
@@ -415,11 +417,13 @@ export default function AdminUpdateGames() {
     setSavingIsActive(true)
     try {
       await matchService.updateRoundIsActive(selectedRound, newValue)
-      setIsActive(newValue)
+      // Recarregar dados do backend para garantir sincronização
+      await loadUpdateGamesMatches(selectedRound)
     } catch (error) {
       console.error('Error updating isActive:', error)
       toast.error('Erro ao atualizar. Tente novamente.')
-      setIsActive(!newValue)
+      // Recarregar dados do backend em caso de erro para garantir estado correto
+      await loadUpdateGamesMatches(selectedRound)
     } finally {
       setSavingIsActive(false)
     }

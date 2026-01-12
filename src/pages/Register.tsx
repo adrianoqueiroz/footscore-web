@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { authService } from '@/services/auth.service'
 import { useNavigate, Link } from 'react-router-dom'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Logo from '@/components/ui/Logo'
 import { useToastContext } from '@/contexts/ToastContext'
+import { AlertCircle } from 'lucide-react'
+import Card from '@/components/ui/Card'
+import iconImage from '@/assets/icon.jpg'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -15,19 +18,40 @@ export default function Register() {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const navigate = useNavigate()
   const toast = useToastContext()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setPasswordError(null)
     setLoading(true)
     try {
       await authService.register({ name, email, phone: phone || undefined, city, nickname: nickname || undefined, password })
       navigate('/') // Redirect to home or login page after successful registration
     } catch (error: any) {
       console.error('Registration error:', error)
-      const errorMessage = error?.message || 'Erro ao registrar. Tente novamente.'
-      toast.error(errorMessage)
+      
+      // Verificar se é erro de validação de senha
+      const isPasswordError = error?.errors?.some((err: any) => 
+        err.param === 'password' || 
+        (err.msg && err.msg.toLowerCase().includes('senha')) ||
+        (err.message && err.message.toLowerCase().includes('senha'))
+      ) || error?.message?.toLowerCase().includes('senha')
+      
+      if (isPasswordError) {
+        // Extrair mensagem específica de senha
+        const passwordErr = error?.errors?.find((err: any) => 
+          err.param === 'password' || 
+          (err.msg && err.msg.toLowerCase().includes('senha')) ||
+          (err.message && err.message.toLowerCase().includes('senha'))
+        )
+        const passwordMessage = passwordErr?.msg || passwordErr?.message || error?.message || 'A senha deve ter no mínimo 6 caracteres'
+        setPasswordError(passwordMessage)
+      } else {
+        const errorMessage = error?.message || 'Erro ao registrar. Tente novamente.'
+        toast.error(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
@@ -111,15 +135,59 @@ export default function Register() {
               onChange={(e) => setNickname(e.target.value)}
               disabled={loading}
             />
-            <Input
-              id="password"
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <div className="space-y-2">
+              <Input
+                id="password"
+                type="password"
+                placeholder="Senha (mínimo 6 caracteres)"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setPasswordError(null)
+                }}
+                required
+                disabled={loading}
+                className={passwordError ? 'border-red-500 focus:border-red-500' : ''}
+              />
+              <AnimatePresence>
+                {passwordError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Card className="p-4 bg-red-500/10 border-red-500/50">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <img 
+                            src={iconImage} 
+                            alt="Logo" 
+                            className="h-6 w-6 rounded-full object-cover"
+                            onError={(e) => {
+                              // Fallback para ícone se a imagem não carregar
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              const parent = target.parentElement
+                              if (parent) {
+                                const icon = document.createElement('div')
+                                icon.innerHTML = '<svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+                                parent.appendChild(icon)
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-red-400">
+                            {passwordError}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Registrando...' : 'Registrar'}
             </Button>

@@ -6,6 +6,7 @@ interface ApiError {
   message: string
   status: number
   error?: string
+  errors?: Array<{ msg?: string; message?: string; param?: string; location?: string }>
 }
 
 class ApiService {
@@ -41,6 +42,20 @@ class ApiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }))
+        
+        // Tratar erros de validação do express-validator (formato { errors: [...] })
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          // Extrair mensagens de erro do array de validação
+          const errorMessages = errorData.errors.map((err: any) => err.msg || err.message || 'Erro de validação')
+          const error: ApiError = {
+            message: errorMessages.join('. '),
+            status: response.status,
+            errors: errorData.errors, // Incluir array completo para tratamento específico
+          }
+          console.error(`[API ERROR] ${response.status}: ${error.message}`, errorData)
+          throw error
+        }
+        
         const error: ApiError = {
           message: errorData.message || errorData.error || `HTTP ${response.status}`,
           status: response.status,

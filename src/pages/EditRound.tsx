@@ -520,13 +520,13 @@ export default function EditRound() {
     setSavingAllowsNewBets(true)
     try {
       await matchService.updateRoundAllowsNewBets(selectedRound, newValue)
-      setAllowsNewBets(newValue)
-      // Mensagem removida conforme solicitado
+      // Recarregar dados do backend para garantir sincronização
+      await loadMatches(selectedRound)
     } catch (error) {
       console.error('Error updating allowsNewBets:', error)
       displayMessage('Erro ao atualizar. Tente novamente.', 'error')
-      // Reverter mudança local em caso de erro
-      setAllowsNewBets(!newValue)
+      // Recarregar dados do backend em caso de erro para garantir estado correto
+      await loadMatches(selectedRound)
     } finally {
       setSavingAllowsNewBets(false)
     }
@@ -538,13 +538,13 @@ export default function EditRound() {
     setSavingIsActive(true)
     try {
       await matchService.updateRoundIsActive(selectedRound, newValue)
-      setIsActive(newValue)
-      // Mensagem removida conforme solicitado
+      // Recarregar dados do backend para garantir sincronização
+      await loadMatches(selectedRound)
     } catch (error) {
       console.error('Error updating isActive:', error)
       displayMessage('Erro ao atualizar. Tente novamente.', 'error')
-      // Reverter mudança local em caso de erro
-      setIsActive(!newValue)
+      // Recarregar dados do backend em caso de erro para garantir estado correto
+      await loadMatches(selectedRound)
     } finally {
       setSavingIsActive(false)
     }
