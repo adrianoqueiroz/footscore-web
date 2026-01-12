@@ -21,7 +21,6 @@ export default function PullToRefreshIndicator({
 }: PullToRefreshIndicatorProps) {
   // Calcula a opacidade baseada na distância do pull
   const opacity = Math.min(pullDistance / 80, 1)
-  const scale = 0.5 + (pullDistance / 80) * 0.5 // Escala de 0.5 para 1.0
 
   return (
     <AnimatePresence>
@@ -29,86 +28,39 @@ export default function PullToRefreshIndicator({
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{
-            opacity: isReloading ? 0.3 : opacity, // Opacidade baixa durante reloading
+            opacity: isReloading ? 0.3 : opacity,
             y: 0
           }}
-          exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.01 } }}
+          exit={{ opacity: 0, transition: { duration: 0 } }}
           style={{
-            // Posicionamento fixed para viewport, isolamento completo
             position: 'fixed',
-            top: '16px',
+            top: 'max(16px, env(safe-area-inset-top, 16px) + 8px)',
             left: '50%',
-            transform: 'translateX(-50%)',
+            marginLeft: '-12px', // Metade da largura do ícone (24px / 2)
             zIndex: 50,
             pointerEvents: 'none',
-            // Garante isolamento visual e performance
-            willChange: 'transform, opacity',
+            willChange: 'opacity',
             isolation: 'isolate',
             contain: 'layout style paint'
           }}
         >
-          {/* Container adicional para garantir overflow perfeito */}
-          <div
-            className="relative"
-            style={{
-              width: '56px', // 16px padding * 2 + 24px icon = 56px
-              height: '56px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              // Garante isolamento completo
-              isolation: 'isolate'
+          {/* Apenas o ícone girando, sem fundo */}
+          <motion.div
+            animate={{
+              rotate: (canRefresh || isReloading) ? 360 : 0
             }}
+            transition={{
+              rotate: (canRefresh || isReloading) ? { duration: 1.2, repeat: Infinity, ease: 'linear' } : { duration: 0.2 }
+            }}
+            className={cn(
+              "transition-colors duration-300",
+              (canRefresh || isReloading)
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
           >
-            <motion.div
-              animate={{
-                scale: scale
-              }}
-              transition={{
-                scale: { duration: 0.3 }
-              }}
-              className={cn(
-                "w-full h-full p-4 rounded-full transition-all duration-300 flex items-center justify-center",
-                isReloading
-                  ? "bg-primary/90 border-2 border-primary text-primary-foreground shadow-primary/50 shadow-lg"
-                  : canRefresh
-                  ? "bg-primary/90 border-2 border-primary text-primary-foreground shadow-primary/50 shadow-lg"
-                  : "bg-background/80 backdrop-blur-md border-2 border-muted-foreground/40 text-muted-foreground shadow-md"
-              )}
-              style={{
-                // Efeito de glow elegante
-                boxShadow: (canRefresh || isReloading)
-                  ? '0 0 20px rgba(var(--primary), 0.3), 0 4px 12px rgba(0, 0, 0, 0.15)'
-                  : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                borderRadius: '50%' // Borda perfeitamente arredondada
-              }}
-            >
-              {/* Círculo interno para profundidade */}
-              <div
-                className={cn(
-                  "absolute inset-1 rounded-full transition-colors duration-300",
-                  canRefresh
-                    ? "bg-primary/20"
-                    : "bg-muted-foreground/10"
-                )}
-                style={{
-                  borderRadius: '50%' // Borda perfeitamente arredondada
-                }}
-              />
-
-              {/* Ícone com rotação dedicada */}
-              <motion.div
-                animate={{
-                  rotate: (canRefresh || isReloading) ? 360 : 0
-                }}
-                transition={{
-                  rotate: (canRefresh || isReloading) ? { duration: 1.2, repeat: Infinity, ease: 'linear' } : { duration: 0.2 }
-                }}
-                className="relative z-10"
-              >
-                <RefreshCw className="h-5 w-5" />
-              </motion.div>
-            </motion.div>
-          </div>
+            <RefreshCw className="h-6 w-6" />
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

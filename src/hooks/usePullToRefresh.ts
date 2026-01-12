@@ -13,6 +13,8 @@ interface PullToRefreshState {
  */
 export function usePullToRefresh(): PullToRefreshState {
   const startYRef = useRef<number | null>(null)
+  const startScrollYRef = useRef<number>(0) // Armazenar scrollY inicial
+  const lastScrollYRef = useRef<number>(0) // Rastrear scrollY durante o movimento
   const [pullState, setPullState] = useState<PullToRefreshState>({
     isPulling: false,
     pullDistance: 0,
@@ -22,38 +24,61 @@ export function usePullToRefresh(): PullToRefreshState {
   const pullThreshold = 80 // Distância mínima para ativar o refresh
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    // Só funciona se estiver no topo da página (scrollY <= 5 para tolerância)
-    if (window.scrollY > 5) return
-
+    // Sempre armazena a posição inicial e scrollY atual
     startYRef.current = e.touches[0].clientY
-    setPullState({
-      isPulling: false,
-      pullDistance: 0,
-      canRefresh: false
-    })
+    startScrollYRef.current = window.scrollY
+    lastScrollYRef.current = window.scrollY // Inicializa o rastreamento
   }, [])
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (startYRef.current === null || window.scrollY > 0) return
+    if (startYRef.current === null) return
 
     const currentY = e.touches[0].clientY
     const deltaY = currentY - startYRef.current
+    const currentScrollY = window.scrollY
+    
+    // Verifica se o scroll mudou durante este movimento específico
+    const scrollChangedThisMove = currentScrollY !== lastScrollYRef.current
+    
+    // Atualiza o último scrollY para o próximo movimento
+    lastScrollYRef.current = currentScrollY
 
-    // Só ativa se estiver arrastando para baixo (deltaY > 0)
-    if (deltaY > 0) {
-      const isPulling = deltaY > 20 // Pequeno threshold para confirmar intenção
+    // Só ativa se:
+    // 1. Começou no topo
+    // 2. Há conteúdo scrollável
+    // 3. Está movendo para baixo
+    const canPageScroll = document.body.scrollHeight > window.innerHeight + 10
+    const isAtTop = startScrollYRef.current <= 5
+
+    if (isAtTop && canPageScroll && deltaY > 0) {
+      // Se o scroll mudou durante o movimento, mostra indicador imediatamente
+      // Se não mudou ainda mas está arrastando, mostra também (aparece antes do scroll)
+      const isPulling = deltaY > 10 // Threshold menor para aparecer imediatamente
       const canRefresh = deltaY > pullThreshold
 
-      setPullState({
-        isPulling,
-        pullDistance: Math.min(deltaY, pullThreshold + 20), // Limita o feedback visual
-        canRefresh
-      })
+      // Só mostra se realmente há scroll ou se está tentando scrollar (deltaY suficiente)
+      if (scrollChangedThisMove || deltaY > 15) {
+        setPullState({
+          isPulling,
+          pullDistance: Math.min(deltaY, pullThreshold + 20),
+          canRefresh
+        })
 
-      // Previne scroll padrão durante qualquer pull-to-refresh
-      if (isPulling) {
-        e.preventDefault()
-        e.stopPropagation()
+        // Só previne scroll quando já confirmou que vai recarregar
+        if (canRefresh) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      }
+    } else {
+      // Se não está no topo ou não há scroll, cancela pull-to-refresh
+      if (deltaY > 0 && (!isAtTop || !canPageScroll)) {
+        setPullState({
+          isPulling: false,
+          pullDistance: 0,
+          canRefresh: false,
+          isReloading: false
+        })
       }
     }
   }, [])
@@ -64,13 +89,15 @@ export function usePullToRefresh(): PullToRefreshState {
     const currentY = e.changedTouches[0].clientY
     const deltaY = currentY - startYRef.current
 
-    // SEMPRE faz o indicador desaparecer quando solta o dedo (evita sobreposição)
-    setPullState(prev => ({
-      ...prev,
-      isPulling: false,
-      pullDistance: 0,
-      canRefresh: false
-    }))
+    // Desaparece INSTANTANEAMENTE usando requestAnimationFrame para garantir que acontece antes do próximo frame
+    requestAnimationFrame(() => {
+      setPullState(prev => ({
+        ...prev,
+        isPulling: false,
+        pullDistance: 0,
+        canRefresh: false
+      }))
+    })
 
     // Se arrastou o suficiente para baixo, recarrega a página
     if (deltaY > pullThreshold) {
@@ -92,6 +119,7 @@ export function usePullToRefresh(): PullToRefreshState {
 
     // Se NÃO vai recarregar, reset completo
     startYRef.current = null
+    lastScrollYRef.current = 0
     setPullState({
       isPulling: false,
       pullDistance: 0,
