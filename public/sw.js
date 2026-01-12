@@ -162,34 +162,68 @@ self.addEventListener('push', (event) => {
     console.log('[SW] Nenhum dado no push event - usando notificação padrão')
   }
 
-  console.log('[SW] 📋 Processing notification for:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
-  console.log('[SW] 📋 Title:', notificationData.title)
-  console.log('[SW] 📋 Body:', notificationData.body)
-
-  try {
-    console.log('[SW] 🔄 Calling showNotification...')
-    const result = self.registration.showNotification(notificationData.title, notificationData)
-    console.log('[SW] ✅ showNotification called successfully')
-    event.waitUntil(result)
-    console.log('[SW] ✅ Notification promise resolved')
-  } catch (error) {
-    console.error('[SW] ❌ FAILED TO SHOW NOTIFICATION:', error.message)
-    console.error('[SW] ❌ For browser:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
-    console.error('[SW] ❌ Notification data:', notificationData.title, '-', notificationData.body)
-
-    // Tentar mostrar uma notificação básica se a personalizada falhar
-    try {
-      console.log('[SW] 🔄 Trying basic notification...')
-      const basicNotification = self.registration.showNotification('Teste Básico', {
-        body: 'Fallback notification',
-        icon: '/icon-192x192.jpg'
+  // Verificar se há clientes (janelas) visíveis antes de mostrar a notificação push
+  // Se o app estiver aberto e visível, ele já receberá a notificação interna via SSE
+  // Então não precisamos mostrar a notificação push para evitar duplicação
+  event.waitUntil(
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    }).then((clientList) => {
+      // Verificar se há algum cliente visível
+      const hasVisibleClient = clientList.some(client => {
+        // Verificar se o cliente está visível ou focado
+        // visibilityState pode ser 'visible', 'hidden', ou 'prerender'
+        // focused indica se a janela tem foco
+        return client.visibilityState === 'visible' || client.focused === true
       })
-      event.waitUntil(basicNotification)
-      console.log('[SW] ✅ Basic notification shown as fallback')
-    } catch (fallbackError) {
-      console.error('[SW] ❌ Even basic notification failed:', fallbackError.message)
-    }
-  }
+
+      if (hasVisibleClient) {
+        console.log('[SW] ⏭️ App está aberto e visível - pulando notificação push (notificação interna será exibida)')
+        return Promise.resolve()
+      }
+
+      // Se não há clientes visíveis, mostrar a notificação push normalmente
+      console.log('[SW] 📋 App não está visível - mostrando notificação push')
+      console.log('[SW] 📋 Processing notification for:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
+      console.log('[SW] 📋 Title:', notificationData.title)
+      console.log('[SW] 📋 Body:', notificationData.body)
+
+      try {
+        console.log('[SW] 🔄 Calling showNotification...')
+        return self.registration.showNotification(notificationData.title, notificationData)
+          .then(() => {
+            console.log('[SW] ✅ showNotification called successfully')
+          })
+          .catch((error) => {
+            console.error('[SW] ❌ FAILED TO SHOW NOTIFICATION:', error.message)
+            console.error('[SW] ❌ For browser:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
+            console.error('[SW] ❌ Notification data:', notificationData.title, '-', notificationData.body)
+
+            // Tentar mostrar uma notificação básica se a personalizada falhar
+            return self.registration.showNotification('⚽ Gol!', {
+              body: 'Um gol foi marcado!',
+              icon: '/icon-192x192.jpg'
+            }).catch((fallbackError) => {
+              console.error('[SW] ❌ Even basic notification failed:', fallbackError.message)
+            })
+          })
+      } catch (error) {
+        console.error('[SW] ❌ Error in showNotification:', error)
+        return Promise.resolve()
+      }
+    }).catch((error) => {
+      // Em caso de erro ao verificar clientes, mostrar a notificação por segurança
+      // (melhor mostrar do que não mostrar se o app estiver fechado)
+      console.error('[SW] ⚠️ Erro ao verificar clientes, mostrando notificação por segurança:', error)
+      try {
+        return self.registration.showNotification(notificationData.title, notificationData)
+      } catch (showError) {
+        console.error('[SW] ❌ Erro ao mostrar notificação:', showError)
+        return Promise.resolve()
+      }
+    })
+  )
 })
 
 // Escutar cliques em notificações
