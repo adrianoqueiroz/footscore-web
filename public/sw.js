@@ -3,7 +3,10 @@ const CACHE_NAME = 'footscore-v1.0.1'
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192x192.jpg',
+  '/icon-512x512.jpg',
+  '/apple-touch-icon.png'
 ]
 
 // Instalar service worker
@@ -92,8 +95,8 @@ self.addEventListener('push', (event) => {
   let notificationData = {
     title: '⚽ Gol!',
     body: 'Um gol foi marcado!',
-    icon: '/vite.svg',
-    badge: '/vite.svg',
+        icon: '/icon-192x192.jpg',
+        badge: '/icon-192x192.jpg',
     tag: 'goal-notification',
     requireInteraction: false,
     vibrate: [200, 100, 200],
@@ -179,7 +182,7 @@ self.addEventListener('push', (event) => {
       console.log('[SW] 🔄 Trying basic notification...')
       const basicNotification = self.registration.showNotification('Teste Básico', {
         body: 'Fallback notification',
-        icon: '/vite.svg'
+        icon: '/icon-192x192.jpg'
       })
       event.waitUntil(basicNotification)
       console.log('[SW] ✅ Basic notification shown as fallback')
