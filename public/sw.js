@@ -93,11 +93,11 @@ self.addEventListener('push', (event) => {
   console.log('[SW] 📨 User visible only:', event.data ? 'yes' : 'no')
 
   let notificationData = {
-    title: '⚽ Gol!',
-    body: 'Um gol foi marcado!',
-        icon: '/icon-192x192.jpg',
-        badge: '/icon-192x192.jpg',
-    tag: 'goal-notification',
+    title: '🔔 Notificação',
+    body: 'Nova notificação',
+    icon: '/icon-192x192.jpg',
+    badge: '/icon-192x192.jpg',
+    tag: 'notification',
     requireInteraction: false,
     vibrate: [200, 100, 200],
     data: {}
@@ -137,25 +137,77 @@ self.addEventListener('push', (event) => {
           round: data.data.round,
           url: '/ranking'
         }
+        notificationData.tag = `goal-${data.data.matchId}-${Date.now()}`
+      } else if (data.type === 'round_bets_status') {
+        console.log('[SW] Round bets status detectado - criando notificação')
+        const { round, allowsNewBets, isBlocked } = data.data || {}
+        
+        if (allowsNewBets) {
+          notificationData.title = '✅ Rodada Aceitando Palpites!'
+          notificationData.body = `A rodada ${round} está aceitando palpites agora!`
+        } else {
+          notificationData.title = '🔒 Rodada Bloqueada!'
+          notificationData.body = isBlocked 
+            ? `A rodada ${round} foi bloqueada automaticamente (30 min antes do primeiro jogo)`
+            : `A rodada ${round} não está mais aceitando palpites`
+        }
 
-        console.log('[SW] Notificação personalizada criada:', {
-          title: notificationData.title,
-          body: notificationData.body
-        })
+        notificationData.data = {
+          type: 'round_bets_status',
+          round,
+          allowsNewBets,
+          isBlocked,
+          url: '/predictions'
+        }
+        notificationData.tag = `round-bets-${round}`
+      } else if (data.type === 'ranking_winner') {
+        console.log('[SW] Ranking winner detectado - criando notificação')
+        const { round, ticketId, position, points } = data.data || {}
+        
+        notificationData.title = '🏆 Você é o Vencedor!'
+        notificationData.body = `Parabéns! Seu ticket está em 1º lugar na rodada ${round} com ${points} pontos!`
+        notificationData.requireInteraction = true
+        notificationData.vibrate = [200, 100, 200, 100, 200]
+
+        notificationData.data = {
+          type: 'ranking_winner',
+          round,
+          ticketId,
+          position,
+          points,
+          url: '/ranking'
+        }
+        notificationData.tag = `ranking-winner-${round}-${ticketId}`
+      } else if (data.type === 'ranking_top_n') {
+        console.log('[SW] Ranking top N detectado - criando notificação')
+        const { round, ticketId, position, points, topN } = data.data || {}
+        
+        notificationData.title = `🎯 Você está no Top ${topN || 3}!`
+        notificationData.body = `Seu ticket está em ${position}º lugar na rodada ${round} com ${points} pontos!`
+        notificationData.vibrate = [200, 100, 200]
+
+        notificationData.data = {
+          type: 'ranking_top_n',
+          round,
+          ticketId,
+          position,
+          points,
+          topN,
+          url: '/ranking'
+        }
+        notificationData.tag = `ranking-top-${round}-${ticketId}`
       } else {
-        console.log('[SW] Não é score_update válido:', {
-          type: data.type,
-          scoreChanged: data.data?.scoreChanged
-        })
+        console.log('[SW] Tipo de notificação desconhecido:', data.type)
         // Usar notificação genérica
-        notificationData.title = '⚽ Atualização de Jogo!'
-        notificationData.body = 'Houve uma mudança no placar'
+        notificationData.title = data.title || '🔔 Notificação'
+        notificationData.body = data.body || 'Nova notificação'
+        notificationData.data = data.data || {}
       }
     } catch (e) {
       console.error('[SW] Erro ao parsear dados do push:', e)
       console.error('[SW] Dados brutos recebidos:', event.data)
       // Usar dados padrão
-      notificationData.title = '⚽ Notificação!'
+      notificationData.title = '🔔 Notificação!'
       notificationData.body = 'Recebida do servidor'
     }
   } else {

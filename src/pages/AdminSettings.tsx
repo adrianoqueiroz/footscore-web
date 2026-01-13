@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Phone, ArrowLeft, Save, Plus, X } from 'lucide-react'
+import { Phone, ArrowLeft, Save, Plus, X, Bell } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { config } from '@/config'
 import { useToastContext } from '@/contexts/ToastContext'
+import { configService } from '@/services/config.service'
 
 export default function AdminSettings() {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ export default function AdminSettings() {
   const [whatsAppNumber, setWhatsAppNumber] = useState('')
   const [gameTimes, setGameTimes] = useState<string[]>([])
   const [newGameTime, setNewGameTime] = useState('')
+  const [rankingTopN, setRankingTopN] = useState(3)
 
   useEffect(() => {
     config.getAdminWhatsApp().then(value => {
@@ -26,6 +28,12 @@ export default function AdminSettings() {
       setGameTimes(times)
     }).catch(() => {
       setGameTimes(config.getGameTimesSync())
+    })
+
+    configService.getRankingNotificationTopN().then(value => {
+      setRankingTopN(value)
+    }).catch(() => {
+      setRankingTopN(3)
     })
   }, [])
 
@@ -78,6 +86,21 @@ export default function AdminSettings() {
     setGameTimes(updatedTimes)
     config.setGameTimes(updatedTimes)
     toast.success('Horário removido com sucesso!')
+  }
+
+  const handleSaveRankingTopN = async () => {
+    if (rankingTopN < 1 || rankingTopN > 100) {
+      toast.warning('O valor deve estar entre 1 e 100')
+      return
+    }
+    
+    try {
+      await configService.setRankingNotificationTopN(rankingTopN)
+      toast.success('Configuração de notificações de ranking atualizada com sucesso!')
+    } catch (error) {
+      console.error('[Admin] Erro ao salvar top N:', error)
+      toast.error('Erro ao salvar configuração. Tente novamente.')
+    }
   }
 
   return (
@@ -186,6 +209,43 @@ export default function AdminSettings() {
                   Adicione horários comuns para facilitar o preenchimento dos confrontos.
                 </p>
               </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" htmlFor="ranking-top-n">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4" />
+                    Top N para Notificações de Ranking
+                  </div>
+                </label>
+                <Input 
+                  id="ranking-top-n" 
+                  type="number" 
+                  min="1"
+                  max="100"
+                  value={rankingTopN} 
+                  onChange={(e) => setRankingTopN(parseInt(e.target.value) || 3)} 
+                  placeholder="Ex: 3" 
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Define quantas posições no topo do ranking devem gerar notificações. 
+                  Usuários serão notificados quando seus tickets entrarem entre os top N colocados. 
+                  Valor padrão: 3 (top 3).
+                </p>
+              </div>
+              <Button onClick={handleSaveRankingTopN} className="w-full">
+                <Save className="mr-2 h-4 w-4" />
+                Salvar
+              </Button>
             </div>
           </Card>
         </motion.div>

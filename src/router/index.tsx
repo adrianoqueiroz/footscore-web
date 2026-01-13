@@ -20,6 +20,7 @@ import DebugPush from '@/pages/DebugPush'
 import EditRound from '@/pages/EditRound'
 import EditPhone from '@/pages/EditPhone'
 import Profile from '@/pages/Profile'
+import NotificationSettings from '@/pages/NotificationSettings'
 import About from '@/pages/About'
 import AppHeader from '@/components/AppHeader'
 import BottomNav from '@/components/ui/BottomNav'
@@ -100,6 +101,7 @@ const AppRoutes = () => {
                     <Route path="/about" element={<About />} />
                     <Route path="/edit-phone" element={<EditPhone />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/notifications" element={<NotificationSettings />} />
                     <Route element={<AdminRoute />}>
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/admin/create-round" element={<AdminCreateRound />} />

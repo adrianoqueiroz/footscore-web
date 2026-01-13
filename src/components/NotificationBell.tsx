@@ -77,6 +77,15 @@ export default function NotificationBell() {
     if (notification.type === 'match_status') {
       return '📊'
     }
+    if (notification.type === 'round_bets_status') {
+      return notification.data?.allowsNewBets ? '✅' : '🔒'
+    }
+    if (notification.type === 'ranking_winner') {
+      return '🏆'
+    }
+    if (notification.type === 'ranking_top_n') {
+      return '🎯'
+    }
     return '🔔'
   }
 

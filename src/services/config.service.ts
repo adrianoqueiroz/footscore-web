@@ -77,5 +77,31 @@ export const configService = {
       throw error
     }
   },
+
+  async getRankingNotificationTopN(): Promise<number> {
+    try {
+      const response = await apiService.get<{ key: string; value: string }>('/config/ranking_notification_top_n')
+      if (response.value) {
+        const value = parseInt(response.value)
+        return isNaN(value) || value < 1 ? 3 : value
+      }
+      return 3 // Padrão: top 3
+    } catch (error) {
+      console.error('Error fetching ranking notification top N:', error)
+      return 3 // Padrão: top 3
+    }
+  },
+
+  async setRankingNotificationTopN(value: number): Promise<void> {
+    if (value < 1 || value > 100) {
+      throw new Error('O valor deve estar entre 1 e 100')
+    }
+    try {
+      await apiService.put('/config/ranking_notification_top_n', { value: value.toString() })
+    } catch (error) {
+      console.error('Error saving ranking notification top N:', error)
+      throw error
+    }
+  },
 }
 

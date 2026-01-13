@@ -116,12 +116,11 @@ export const ToastContainer = ({ toasts, onClose }: ToastContainerProps) => {
   return (
     <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
       <div className="flex flex-col gap-2 items-center">
-        <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatePresence initial={false}>
           {toasts.map((toast) => (
             <motion.div 
               key={toast.id} 
               className="pointer-events-auto"
-              layout
             >
               <ToastComponent toast={toast} onClose={onClose} />
             </motion.div>

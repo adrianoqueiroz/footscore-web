@@ -102,6 +102,50 @@ export const authService = {
     }
   },
 
+  async getNotificationPreferences(): Promise<{
+    notifyGoals: boolean
+    notifyGoalsAllTeams: boolean
+    favoriteTeam: string | null
+    notifyRoundBets: boolean
+    notifyRanking: boolean
+  }> {
+    try {
+      const response = await apiService.get<{ preferences: any }>('/auth/notification-preferences')
+      return {
+        notifyGoals: response.preferences.notifyGoals ?? true,
+        notifyGoalsAllTeams: response.preferences.notifyGoalsAllTeams ?? true,
+        favoriteTeam: response.preferences.favoriteTeam ?? null,
+        notifyRoundBets: response.preferences.notifyRoundBets ?? true,
+        notifyRanking: response.preferences.notifyRanking ?? true
+      }
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error)
+      // Retornar padrões se erro
+      return {
+        notifyGoals: true,
+        notifyGoalsAllTeams: true,
+        favoriteTeam: null,
+        notifyRoundBets: true,
+        notifyRanking: true
+      }
+    }
+  },
+
+  async updateNotificationPreferences(preferences: {
+    notifyGoals?: boolean
+    notifyGoalsAllTeams?: boolean
+    favoriteTeam?: string | null
+    notifyRoundBets?: boolean
+    notifyRanking?: boolean
+  }): Promise<void> {
+    try {
+      await apiService.put('/auth/notification-preferences', preferences)
+    } catch (error) {
+      console.error('Error updating notification preferences:', error)
+      throw error
+    }
+  },
+
   async refreshUser(): Promise<User | null> {
     try {
       const response = await apiService.get<{ user: User }>('/auth/me')
