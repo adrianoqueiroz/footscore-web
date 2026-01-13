@@ -19,6 +19,7 @@ import AdminSettings from '@/pages/AdminSettings'
 import DebugPush from '@/pages/DebugPush'
 import EditRound from '@/pages/EditRound'
 import EditPhone from '@/pages/EditPhone'
+import Account from '@/pages/Account'
 import Profile from '@/pages/Profile'
 import NotificationSettings from '@/pages/NotificationSettings'
 import About from '@/pages/About'
@@ -102,6 +103,7 @@ const AppRoutes = () => {
                     <Route path="/edit-phone" element={<EditPhone />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/notifications" element={<NotificationSettings />} />
+                    <Route path="/account" element={<Account />} />
                     <Route element={<AdminRoute />}>
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/admin/create-round" element={<AdminCreateRound />} />

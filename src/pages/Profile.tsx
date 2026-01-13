@@ -7,9 +7,7 @@ import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
 import { authService } from '@/services/auth.service'
 import { useToastContext } from '@/contexts/ToastContext'
-import { useMatchEvents } from '@/hooks/useMatchEvents'
 import { useAvatarCache } from '@/hooks/useAvatarCache'
-import PulsingBall from '@/components/ui/PulsingBall'
 import ContentWrapper from '@/components/ui/ContentWrapper'
 
 export default function Profile() {
@@ -26,39 +24,6 @@ export default function Profile() {
   const [nickname, setNickname] = useState('')
   const [loading, setLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [showPulsingBall, setShowPulsingBall] = useState(false)
-  const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
-
-  // Conectar ao SSE para receber atualizações de placar
-  useMatchEvents((event) => {
-    if (event.type === 'score_update' && event.data.scoreChanged) {
-      // Atualizar matchInfo e mostrar bola pulsando
-      const matchInfo = {
-        homeTeam: event.data.homeTeam,
-        awayTeam: event.data.awayTeam,
-        homeScore: event.data.homeScore,
-        awayScore: event.data.awayScore,
-        goalScorer: event.data.goalScorer,
-        isGoalCancelled: event.data.isGoalCancelled || false,
-        homeTeamLogo: event.data.homeTeamLogo || null,
-        awayTeamLogo: event.data.awayTeamLogo || null,
-      }
-      
-      // Atualizar matchInfo primeiro
-      setLastScoreUpdate(matchInfo)
-      
-      // Aguardar um pouco para garantir que o estado foi atualizado, depois mostrar
-      // Usar requestAnimationFrame para garantir que o estado foi atualizado
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setShowPulsingBall(false)
-          setTimeout(() => {
-            setShowPulsingBall(true)
-          }, 20)
-        })
-      })
-    }
-  })
 
   useEffect(() => {
     if (user) {
@@ -109,7 +74,7 @@ export default function Profile() {
       if (updatedUser) {
         setName(updatedUser.name)
         setPhone(updatedUser.phone || '')
-        setCity(updatedUser.city || '')
+        setCity(updatedUser.city)
         setNickname(updatedUser.nickname || '')
       }
       toast.success('Perfil atualizado com sucesso!')
@@ -128,12 +93,7 @@ export default function Profile() {
 
   return (
     <ContentWrapper>
-      <PulsingBall
-        show={showPulsingBall}
-        matchInfo={lastScoreUpdate || undefined}
-        onClick={() => setShowPulsingBall(false)}
-      />
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <Button
@@ -144,7 +104,10 @@ export default function Profile() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold flex-1">Detalhes da Conta</h1>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">Editar Perfil</h1>
+            <p className="text-sm text-muted-foreground">Gerencie suas informações pessoais</p>
+          </div>
         </div>
 
         {/* Avatar/Foto do Usuário */}
@@ -177,63 +140,62 @@ export default function Profile() {
         </div>
 
         {/* Informações do Usuário */}
-        <Card className="p-4 space-y-3">
-          {/* Nome */}
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            {isEditing ? (
-              <div className="relative flex-1">
-                <Input
-                  type="text"
-                  placeholder="Seu nome completo"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-0"
-                />
+        <Card className="p-4 space-y-4">
+          {/* Campos editáveis */}
+          <div className="space-y-4">
+            {/* Nome */}
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
               </div>
-            ) : (
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-muted-foreground">Nome</p>
-                <p className="text-base font-semibold truncate">{name}</p>
+                {isEditing ? (
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome completo"
+                    className="w-full"
+                  />
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nome</p>
+                    <p className="text-base font-semibold">{name}</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          {/* Email (somente leitura) */}
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-              <Mail className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="text-base font-semibold truncate">{user.email}</p>
-            </div>
-          </div>
 
-          <div className="border-t border-border/50 pt-3 space-y-3">
+            {/* Email (somente leitura) */}
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                <Mail className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="text-base font-semibold">{user.email}</p>
+              </div>
+            </div>
+
             {/* Telefone */}
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <Phone className="h-5 w-5 text-primary" />
               </div>
-              {isEditing ? (
-                <div className="relative flex-1">
+              <div className="flex-1 min-w-0">
+                {isEditing ? (
                   <Input
-                    type="tel"
-                    placeholder="(11) 98765-4321"
                     value={phone}
                     onChange={(e) => setPhone(formatPhone(e.target.value))}
-                    className="pl-0"
+                    placeholder="(11) 99999-9999"
+                    className="w-full"
                   />
-                </div>
-              ) : (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground">Telefone</p>
-                  <p className="text-base font-semibold">{phone || 'Não informado'}</p>
-                </div>
-              )}
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Telefone</p>
+                    <p className="text-base font-semibold">{phone || 'Não informado'}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Cidade */}
@@ -241,23 +203,22 @@ export default function Profile() {
               <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <MapPin className="h-5 w-5 text-primary" />
               </div>
-              {isEditing ? (
-                <div className="relative flex-1">
+              <div className="flex-1 min-w-0">
+                {isEditing ? (
                   <Input
-                    type="text"
-                    placeholder="Sua cidade"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
+                    placeholder="Sua cidade"
+                    className="w-full"
                     required
-                    className="pl-0"
                   />
-                </div>
-              ) : (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground">Cidade</p>
-                  <p className="text-base font-semibold">{city || 'Não informado'}</p>
-                </div>
-              )}
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cidade</p>
+                    <p className="text-base font-semibold">{city}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Apelido */}
@@ -265,22 +226,21 @@ export default function Profile() {
               <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <UserCircle className="h-5 w-5 text-primary" />
               </div>
-              {isEditing ? (
-                <div className="relative flex-1">
+              <div className="flex-1 min-w-0">
+                {isEditing ? (
                   <Input
-                    type="text"
-                    placeholder="Seu apelido (opcional)"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
-                    className="pl-0"
+                    placeholder="Seu apelido (opcional)"
+                    className="w-full"
                   />
-                </div>
-              ) : (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground">Apelido</p>
-                  <p className="text-base font-semibold">{nickname || 'Não informado'}</p>
-                </div>
-              )}
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Apelido</p>
+                    <p className="text-base font-semibold">{nickname || 'Não informado'}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Card>
@@ -333,4 +293,3 @@ export default function Profile() {
     </ContentWrapper>
   )
 }
-

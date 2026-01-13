@@ -14,13 +14,11 @@ export default function NotificationSettings() {
   const navigate = useNavigate()
   const toast = useToastContext()
 
-  // Preferências de notificação
   const [notifyGoalsAllTeams, setNotifyGoalsAllTeams] = useState(true)
   const [favoriteTeam, setFavoriteTeam] = useState<string | null>(null)
   const [notifyRoundBets, setNotifyRoundBets] = useState(true)
   const [notifyRanking, setNotifyRanking] = useState(true)
-  const [savingPreferences, setSavingPreferences] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   // Lista de times (Série A)
   const TEAMS = [
@@ -33,7 +31,6 @@ export default function NotificationSettings() {
 
   useEffect(() => {
     // Carregar preferências de notificação
-    setLoading(true)
     authService.getNotificationPreferences()
       .then(prefs => {
         setNotifyGoalsAllTeams(prefs.notifyGoalsAllTeams)
@@ -42,16 +39,12 @@ export default function NotificationSettings() {
         setNotifyRanking(prefs.notifyRanking)
       })
       .catch(error => {
-        console.error('Erro ao carregar preferências:', error)
-        toast.error('Erro ao carregar preferências de notificação')
+        console.error('Erro ao carregar preferências de notificação:', error)
       })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [toast])
+  }, [])
 
-  const handleSaveNotificationPreferences = async () => {
-    setSavingPreferences(true)
+  const handleSave = async () => {
+    setSaving(true)
     try {
       await authService.updateNotificationPreferences({
         notifyGoals: true, // Sempre true já que não há mais toggle principal
@@ -65,26 +58,13 @@ export default function NotificationSettings() {
       const errorMessage = error?.message || 'Erro ao atualizar preferências. Tente novamente.'
       toast.error(errorMessage)
     } finally {
-      setSavingPreferences(false)
+      setSaving(false)
     }
-  }
-
-  if (loading) {
-    return (
-      <ContentWrapper>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-sm text-muted-foreground">Carregando preferências...</p>
-          </div>
-        </div>
-      </ContentWrapper>
-    )
   }
 
   return (
     <ContentWrapper>
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <Button
@@ -96,16 +76,16 @@ export default function NotificationSettings() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Notificações</h1>
-            <p className="text-sm text-muted-foreground">Configure suas preferências de notificação</p>
+            <h1 className="text-2xl font-bold">Preferências de Notificação</h1>
+            <p className="text-sm text-muted-foreground">Configure quando deseja receber notificações</p>
           </div>
         </div>
 
-        {/* Preferências de Notificação */}
+        {/* Configurações de Notificação */}
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2 mb-4">
             <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Preferências de Notificação</h2>
+            <h2 className="text-xl font-bold">Notificações</h2>
           </div>
 
           <div className="space-y-4">
@@ -140,7 +120,7 @@ export default function NotificationSettings() {
             <div>
               <p className="font-medium text-sm mb-1">Notificações de Gol</p>
               <p className="text-xs text-muted-foreground mb-4">Receber notificações quando houver gols</p>
-              
+
               <div className="space-y-3 pl-2">
                 {/* Todos */}
                 <div className="flex items-center justify-between">
@@ -201,18 +181,19 @@ export default function NotificationSettings() {
               </div>
             </div>
           </div>
-
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleSaveNotificationPreferences}
-            disabled={savingPreferences}
-            className="w-full mt-4"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {savingPreferences ? 'Salvando...' : 'Salvar Preferências'}
-          </Button>
         </Card>
+
+        {/* Botão de Salvar */}
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {saving ? 'Salvando...' : 'Salvar Preferências'}
+        </Button>
       </div>
     </ContentWrapper>
   )

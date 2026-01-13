@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import { LogOut, User, Bell, BellOff, Settings } from 'lucide-react'
 import { authService } from '@/services/auth.service'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
@@ -14,7 +13,6 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile }: UserMenuProps) {
-  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -82,11 +80,6 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
     onEditProfile()
   }
 
-  const handleNotifications = () => {
-    setIsOpen(false)
-    navigate('/notifications')
-  }
-
   return (
     <div className="relative" ref={menuRef}>
       <motion.button
@@ -138,15 +131,6 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
               >
                 <User className="h-4 w-4" />
                 <span>Detalhes da Conta</span>
-              </motion.button>
-
-              <motion.button
-                onClick={handleNotifications}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition-colors"
-                whileHover={{ x: 4 }}
-              >
-                <Bell className="h-4 w-4" />
-                <span>Notificações</span>
               </motion.button>
 
               {/* Push Notifications */}

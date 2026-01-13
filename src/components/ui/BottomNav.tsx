@@ -1,5 +1,5 @@
 import React from 'react'
-import { Home, Ticket, Trophy, Settings, HelpCircle } from 'lucide-react'
+import { Home, Ticket, Trophy, Settings, HelpCircle, User } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -54,88 +54,122 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
     <>
       {/* Mobile: Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 safe-area-inset-bottom overflow-x-hidden md:hidden">
-        <div className="mx-auto flex max-w-md w-full items-center justify-around px-2 py-2">
-          {items.map((item) => {
-            const Icon = item.icon
-            const isActive = current === item.key
+        <div className="mx-auto flex max-w-md w-full items-center px-2 py-2">
+          {/* Navigation Items - Left */}
+          <div className="flex flex-1 items-center justify-around">
+            {items.map((item) => {
+              const Icon = item.icon
+              const isActive = current === item.key
 
-            return (
-              <motion.button
-                key={item.key}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
+              return (
+                <motion.button
+                  key={item.key}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
 
-                  // Prevenir múltiplas navegações simultâneas
-                  if (isNavigatingRef.current) return
+                    // Prevenir múltiplas navegações simultâneas
+                    if (isNavigatingRef.current) return
 
-                  // Prioridade máxima: navegar imediatamente sem verificações desnecessárias
-                  if (location.pathname !== item.path) {
-                    isNavigatingRef.current = true
-                    // Feedback háptico em background (não bloqueante)
-                    setTimeout(() => triggerHaptic('light'), 0)
-                    // Navegação síncrona com prioridade máxima
-                    navigate(item.path, { replace: false })
-                    // Reset flag após um pequeno delay
-                    setTimeout(() => {
-                      isNavigatingRef.current = false
-                    }, 100)
-                  }
-                }}
-                onTouchStart={isIOS ? (e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-
-                  // Prevenir múltiplas navegações simultâneas
-                  if (isNavigatingRef.current) return
-
-                  // Para iOS: usar touchstart para resposta mais imediata
-                  if (location.pathname !== item.path) {
-                    isNavigatingRef.current = true
-                    // Forçar navegação imediata no iOS usando requestAnimationFrame
-                    requestAnimationFrame(() => {
+                    // Prioridade máxima: navegar imediatamente sem verificações desnecessárias
+                    if (location.pathname !== item.path) {
+                      isNavigatingRef.current = true
+                      // Feedback háptico em background (não bloqueante)
+                      setTimeout(() => triggerHaptic('light'), 0)
+                      // Navegação síncrona com prioridade máxima
                       navigate(item.path, { replace: false })
-                    })
-                    // Feedback háptico em background
-                    setTimeout(() => triggerHaptic('light'), 10)
-                    // Reset flag após um pequeno delay
-                    setTimeout(() => {
-                      isNavigatingRef.current = false
-                    }, 100)
-                  }
-                } : undefined}
-                className={cn(
-                  'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-3 transition-colors',
-                  'touch-manipulation select-none', // Otimizações específicas para toque
-                  isIOS && 'cursor-pointer', // Cursor específico para iOS
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                )}
-                style={isIOS ? {
-                  WebkitTapHighlightColor: 'transparent', // Remove highlight azul do iOS
-                  WebkitTouchCallout: 'none', // Previne menu de contexto
-                  WebkitUserSelect: 'none', // Previne seleção de texto
-                } : undefined}
-                whileTap={{ scale: 0.95 }}
-              >
-                {isActive && (
-                  <motion.div
-                    className="absolute -top-0.5 left-1/2 h-1 w-8 rounded-full bg-primary pointer-events-none"
-                    initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
-                    animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 400,
-                      damping: 30,
-                      duration: 0.4,
-                      opacity: { duration: 0.15 }
-                    }}
-                  />
-                )}
-                <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
-                <span className="text-xs font-medium">{item.label}</span>
-              </motion.button>
-            )
-          })}
+                      // Reset flag após um pequeno delay
+                      setTimeout(() => {
+                        isNavigatingRef.current = false
+                      }, 100)
+                    }
+                  }}
+                  onTouchStart={isIOS ? (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+
+                    // Prevenir múltiplas navegações simultâneas
+                    if (isNavigatingRef.current) return
+
+                    // Para iOS: usar touchstart para resposta mais imediata
+                    if (location.pathname !== item.path) {
+                      isNavigatingRef.current = true
+                      // Forçar navegação imediata no iOS usando requestAnimationFrame
+                      requestAnimationFrame(() => {
+                        navigate(item.path, { replace: false })
+                      })
+                      // Feedback háptico em background
+                      setTimeout(() => triggerHaptic('light'), 10)
+                      // Reset flag após um pequeno delay
+                      setTimeout(() => {
+                        isNavigatingRef.current = false
+                      }, 100)
+                    }
+                  } : undefined}
+                  className={cn(
+                    'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-3 transition-colors',
+                    'touch-manipulation select-none', // Otimizações específicas para toque
+                    isIOS && 'cursor-pointer', // Cursor específico para iOS
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  )}
+                  style={isIOS ? {
+                    WebkitTapHighlightColor: 'transparent', // Remove highlight azul do iOS
+                    WebkitTouchCallout: 'none', // Previne menu de contexto
+                    WebkitUserSelect: 'none', // Previne seleção de texto
+                  } : undefined}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {isActive && (
+                    <motion.div
+                      className="absolute -top-0.5 left-1/2 h-1 w-8 rounded-full bg-primary pointer-events-none"
+                      initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
+                      animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 400,
+                        damping: 30,
+                        duration: 0.4,
+                        opacity: { duration: 0.15 }
+                      }}
+                    />
+                  )}
+                  <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+                  <span className="text-xs font-medium">{item.label}</span>
+                </motion.button>
+              )
+            })}
+          </div>
+
+          {/* Profile Icon - Right */}
+          <div className="flex items-center justify-center">
+            <motion.button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                navigate('/account')
+              }}
+              onTouchStart={isIOS ? (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                navigate('/account')
+              } : undefined}
+              className={cn(
+                'relative flex flex-col items-center justify-center gap-1 rounded-lg py-3 px-3 transition-colors',
+                'touch-manipulation select-none', // Otimizações específicas para toque
+                isIOS && 'cursor-pointer', // Cursor específico para iOS
+                'text-muted-foreground'
+              )}
+              style={isIOS ? {
+                WebkitTapHighlightColor: 'transparent', // Remove highlight azul do iOS
+                WebkitTouchCallout: 'none', // Previne menu de contexto
+                WebkitUserSelect: 'none', // Previne seleção de texto
+              } : undefined}
+              whileTap={{ scale: 0.95 }}
+            >
+              <User className="h-5 w-5" />
+              <span className="text-xs font-medium">Conta</span>
+            </motion.button>
+          </div>
         </div>
       </nav>
 
