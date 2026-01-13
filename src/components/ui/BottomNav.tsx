@@ -47,8 +47,11 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
       // Caso contrário, assume que veio de tickets
       return 'tickets'
     }
-    return navItems.find(i => location.pathname.startsWith(i.path))?.key || 'rounds'
+    return navItems.find(i => location.pathname.startsWith(i.path))?.key || null
   }, [location.pathname, location.search])
+
+  // Verificar se estamos na página de conta
+  const isAccountPage = location.pathname === '/account'
 
   return (
     <>
@@ -157,7 +160,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                 'relative flex flex-col items-center justify-center gap-1 rounded-lg py-3 px-3 transition-colors',
                 'touch-manipulation select-none', // Otimizações específicas para toque
                 isIOS && 'cursor-pointer', // Cursor específico para iOS
-                'text-muted-foreground'
+                isAccountPage ? 'text-primary' : 'text-muted-foreground'
               )}
               style={isIOS ? {
                 WebkitTapHighlightColor: 'transparent', // Remove highlight azul do iOS
@@ -166,7 +169,21 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
               } : undefined}
               whileTap={{ scale: 0.95 }}
             >
-              <User className="h-5 w-5" />
+              {isAccountPage && (
+                <motion.div
+                  className="absolute -top-0.5 left-1/2 h-1 w-8 rounded-full bg-primary pointer-events-none"
+                  initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
+                  animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 400,
+                    damping: 30,
+                    duration: 0.4,
+                    opacity: { duration: 0.15 }
+                  }}
+                />
+              )}
+              <User className={cn('h-5 w-5', isAccountPage && 'text-primary')} />
               <span className="text-xs font-medium">Conta</span>
             </motion.button>
           </div>
