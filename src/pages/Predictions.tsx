@@ -37,7 +37,7 @@ export default function Predictions() {
   const [showSummaryModal, setShowSummaryModal] = useState(false)
   const carouselContainerRef = useRef<HTMLDivElement>(null)
   const [carouselWidth, setCarouselWidth] = useState(0)
-  const { rounds, selectedRound, setSelectedRound } = useRoundSelector()
+  const { rounds, selectedRound, setSelectedRound, validateSelection } = useRoundSelector()
   const toast = useToastContext()
   const confirm = useConfirmContext()
   const showMatchesLoading = useDelayedLoading(matchesLoading)
@@ -71,6 +71,13 @@ export default function Predictions() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRound, editingTicketId])
+
+  // Validar seleção quando rodadas mudam
+  useEffect(() => {
+    if (rounds.length > 0) {
+      validateSelection()
+    }
+  }, [rounds, validateSelection])
 
   // Garantir que todas as previsões sejam inicializadas quando matches mudarem
   useEffect(() => {

@@ -67,6 +67,9 @@ export default function AdminUpdateGames() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { rounds, selectedRound, setSelectedRound, refreshRounds } = useRoundSelector()
+
+  // Chave para armazenar a seleção da página admin no localStorage
+  const ADMIN_ROUND_SELECTION_KEY = 'admin_selected_round'
   const toast = useToastContext()
   const confirm = useConfirmContext()
 
@@ -74,7 +77,6 @@ export default function AdminUpdateGames() {
   const [updateGamesView, setUpdateGamesView] = useState<UpdateGamesView>('list')
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [updateGamesMatches, setUpdateGamesMatches] = useState<Match[]>([])
-  const [allRoundsForSelector, setAllRoundsForSelector] = useState<number[]>([])
   const [updateGamesLoading, setUpdateGamesLoading] = useState(false)
   const [roundsSelectorLoading, setRoundsSelectorLoading] = useState(false)
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
@@ -85,8 +87,11 @@ export default function AdminUpdateGames() {
   const [tempDate, setTempDate] = useState('')
   const [tempTime, setTempTime] = useState('')
   const [roundsSelectorInitialized, setRoundsSelectorInitialized] = useState(false)
-  const [allowsNewBets, setAllowsNewBets] = useState(true)
-  const [isActive, setIsActive] = useState(true)
+  const [showAllRounds, setShowAllRounds] = useState(false)
+  const [allRoundsForSelector, setAllRoundsForSelector] = useState<number[]>([])
+  const [adminSelectedRound, setAdminSelectedRound] = useState<number | undefined>(undefined)
+  const [allowsNewBets, setAllowsNewBets] = useState<boolean | undefined>(undefined)
+  const [isActive, setIsActive] = useState<boolean | undefined>(undefined)
   const [savingAllowsNewBets, setSavingAllowsNewBets] = useState(false)
   const [savingIsActive, setSavingIsActive] = useState(false)
   const [isReordering, setIsReordering] = useState(false)
@@ -125,6 +130,59 @@ export default function AdminUpdateGames() {
     }
   }, [searchParams, rounds, setSelectedRound])
 
+  // Carregar todas as rodadas quando a página é montada (uma vez)
+  useEffect(() => {
+    const loadAllRoundsOnMount = async () => {
+      if (!roundsSelectorInitialized) {
+        // Definir showAllRounds imediatamente para evitar mudança visual
+        setShowAllRounds(true)
+        setRoundsSelectorLoading(true)
+        try {
+          const roundsData = await matchService.getAllRounds()
+          const sortedRounds = [...roundsData].sort((a, b) => a - b)
+          setAllRoundsForSelector(sortedRounds)
+
+          // Inicializar a seleção local da admin
+          setAdminSelectedRound(() => {
+            // Primeiro tentar carregar do localStorage
+            const savedAdminRound = localStorage.getItem(ADMIN_ROUND_SELECTION_KEY)
+            if (savedAdminRound) {
+              const parsedRound = parseInt(savedAdminRound, 10)
+              if (!isNaN(parsedRound)) {
+                return parsedRound
+              }
+            }
+            // Caso contrário, inicializar com a seleção global ou última rodada
+            return selectedRound || (roundsData.length > 0 ? roundsData[roundsData.length - 1] : undefined)
+          })
+
+          setRoundsSelectorInitialized(true)
+        } catch (error) {
+          console.error('Error loading all rounds on mount:', error)
+          // Em caso de erro, usar as rodadas ativas como fallback
+          setAllRoundsForSelector(rounds)
+          setAdminSelectedRound(() => {
+            // Mesmo tratamento em caso de erro
+            const savedAdminRound = localStorage.getItem(ADMIN_ROUND_SELECTION_KEY)
+            if (savedAdminRound) {
+              const parsedRound = parseInt(savedAdminRound, 10)
+              if (!isNaN(parsedRound)) {
+                return parsedRound
+              }
+            }
+            return selectedRound || (rounds.length > 0 ? rounds[rounds.length - 1] : undefined)
+          })
+          setRoundsSelectorInitialized(true)
+        } finally {
+          setRoundsSelectorLoading(false)
+        }
+      }
+    }
+
+    loadAllRoundsOnMount()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Removido rounds e selectedRound das dependências para evitar recarregamento
+
   // Detectar layout de 2 colunas
   useEffect(() => {
     const handleResize = () => {
@@ -137,11 +195,14 @@ export default function AdminUpdateGames() {
 
   // Carregar matches quando rodada selecionada mudar
   useEffect(() => {
-    if (selectedRound) {
+    if (adminSelectedRound) {
       isInitialLoadRef.current = true
-      loadUpdateGamesMatches(selectedRound)
+      // Resetar estados para mostrar skeletons durante o loading
+      setAllowsNewBets(undefined)
+      setIsActive(undefined)
+      loadUpdateGamesMatches(adminSelectedRound)
     }
-  }, [selectedRound])
+  }, [adminSelectedRound])
 
   // Calcular largura do carrossel
   useEffect(() => {
@@ -262,7 +323,7 @@ export default function AdminUpdateGames() {
       })
       setCustomTimeMatches(customMatches)
       
-      setAllowsNewBets(allows)
+      setAllowsNewBets(allows !== undefined ? allows : true)
       setIsActive(active !== undefined ? active : true)
       
       isInitialLoadRef.current = false
@@ -386,7 +447,7 @@ export default function AdminUpdateGames() {
   }
 
   const handleToggleAllowsNewBets = async (newValue: boolean) => {
-    if (!selectedRound) return
+    if (!adminSelectedRound) return
     
     if (newValue === true) {
       const hasStartedMatches = updateGamesMatches.some(m => m.status === 'live' || m.status === 'finished')
@@ -398,32 +459,32 @@ export default function AdminUpdateGames() {
     
     setSavingAllowsNewBets(true)
     try {
-      await matchService.updateRoundAllowsNewBets(selectedRound, newValue)
+      await matchService.updateRoundAllowsNewBets(adminSelectedRound, newValue)
       // Recarregar dados do backend para garantir sincronização
-      await loadUpdateGamesMatches(selectedRound)
+      await loadUpdateGamesMatches(adminSelectedRound)
     } catch (error) {
       console.error('Error updating allowsNewBets:', error)
       toast.error('Erro ao atualizar. Tente novamente.')
       // Recarregar dados do backend em caso de erro para garantir estado correto
-      await loadUpdateGamesMatches(selectedRound)
+      await loadUpdateGamesMatches(adminSelectedRound)
     } finally {
       setSavingAllowsNewBets(false)
     }
   }
 
   const handleToggleIsActive = async (newValue: boolean) => {
-    if (!selectedRound) return
+    if (!adminSelectedRound) return
     
     setSavingIsActive(true)
     try {
-      await matchService.updateRoundIsActive(selectedRound, newValue)
+      await matchService.updateRoundIsActive(adminSelectedRound, newValue)
       // Recarregar dados do backend para garantir sincronização
-      await loadUpdateGamesMatches(selectedRound)
+      await loadUpdateGamesMatches(adminSelectedRound)
     } catch (error) {
       console.error('Error updating isActive:', error)
       toast.error('Erro ao atualizar. Tente novamente.')
       // Recarregar dados do backend em caso de erro para garantir estado correto
-      await loadUpdateGamesMatches(selectedRound)
+      await loadUpdateGamesMatches(adminSelectedRound)
     } finally {
       setSavingIsActive(false)
     }
@@ -489,7 +550,7 @@ export default function AdminUpdateGames() {
   }
 
   const saveNewOrder = async (matchesWithNewOrder: Match[]) => {
-    if (!selectedRound) return
+    if (!adminSelectedRound) return
 
     setSavingOrder(true)
     try {
@@ -498,13 +559,13 @@ export default function AdminUpdateGames() {
         order: match.order || 1
       }))
 
-      await matchService.updateMatchOrder(selectedRound, matchOrders)
+      await matchService.updateMatchOrder(adminSelectedRound, matchOrders)
       toast.success('Ordem dos jogos atualizada com sucesso!')
     } catch (error) {
       console.error('Error saving order:', error)
       toast.error('Erro ao salvar ordem. Tente novamente.')
-      if (selectedRound) {
-        await loadUpdateGamesMatches(selectedRound)
+      if (adminSelectedRound) {
+        await loadUpdateGamesMatches(adminSelectedRound)
       }
     } finally {
       setSavingOrder(false)
@@ -531,11 +592,11 @@ export default function AdminUpdateGames() {
   }
 
   const handleDeleteAllTickets = async () => {
-    if (!selectedRound || !deleteTicketsPassword) return
+    if (!adminSelectedRound || !deleteTicketsPassword) return
 
     setDeletingTickets(true)
     try {
-      await ticketService.deleteTicketsByRound(selectedRound, deleteTicketsPassword)
+      await ticketService.deleteTicketsByRound(adminSelectedRound, deleteTicketsPassword)
       setShowDeleteTicketsModal(false)
       setDeleteTicketsPassword('')
       toast.success('Todos os palpites foram deletados com sucesso')
@@ -548,11 +609,11 @@ export default function AdminUpdateGames() {
   }
 
   const handleDeleteRound = async () => {
-    if (!selectedRound || !deletePassword) return
+    if (!adminSelectedRound || !deletePassword) return
 
     setDeletingRound(true)
     try {
-      await matchService.deleteRound(selectedRound, deletePassword)
+      await matchService.deleteRound(adminSelectedRound, deletePassword)
       setShowDeleteRoundModal(false)
       setDeletePassword('')
       await refreshRounds()
@@ -582,7 +643,7 @@ export default function AdminUpdateGames() {
   }
 
   const handleAddMatch = async () => {
-    if (!selectedRound) return
+    if (!adminSelectedRound) return
 
     if (!newMatch.homeTeam || !newMatch.awayTeam || !newMatch.date || !newMatch.time) {
       toast.warning('Preencha todos os campos do confronto')
@@ -601,12 +662,12 @@ export default function AdminUpdateGames() {
         awayTeam: newMatch.awayTeam,
         date: newMatch.date,
         time: newMatch.time,
-        round: selectedRound,
+        round: adminSelectedRound,
         homeTeamLogo: getLogoPath(newMatch.homeTeam, selectedLeague),
         awayTeamLogo: getLogoPath(newMatch.awayTeam, selectedLeague),
       })
 
-      await loadUpdateGamesMatches(selectedRound)
+      await loadUpdateGamesMatches(adminSelectedRound)
       setNewMatch({ homeTeam: '', awayTeam: '', date: '', time: '' })
       setShowAddMatch(false)
       toast.success('Confronto adicionado com sucesso')
@@ -1182,55 +1243,49 @@ export default function AdminUpdateGames() {
               <div className="flex-1 min-w-0">
                 <h2 className="text-2xl font-bold">Gerenciar Rodadas</h2>
               </div>
-              {roundsSelectorLoading && !roundsSelectorInitialized ? (
-                <Skeleton className="h-10 w-40 shrink-0" />
-              ) : (
-                <RoundSelector
-                  rounds={allRoundsForSelector.length > 0 ? allRoundsForSelector : rounds}
-                  selectedRound={selectedRound}
-                  onRoundChange={setSelectedRound}
-                  alwaysCallOnOpen={true}
-                  onOpen={async () => {
-                    if (!roundsSelectorInitialized) {
-                      setRoundsSelectorLoading(true)
-                    }
-                    try {
-                      const roundsData = await matchService.getAllRounds()
-                      const sortedRounds = [...roundsData].sort((a, b) => a - b)
-                      setAllRoundsForSelector(sortedRounds)
-                      setRoundsSelectorInitialized(true)
-                    } catch (error) {
-                      console.error('Error loading all rounds:', error)
-                    } finally {
-                      setRoundsSelectorLoading(false)
-                    }
-                  }}
-                />
-              )}
+              <RoundSelector
+                rounds={showAllRounds ? allRoundsForSelector : rounds}
+                selectedRound={adminSelectedRound}
+                onRoundChange={(round) => {
+                  setAdminSelectedRound(round)
+                  // Salvar no localStorage para persistir entre sessões
+                  localStorage.setItem(ADMIN_ROUND_SELECTION_KEY, round.toString())
+                  // Seleção independente - não afeta seleção global das outras páginas
+                }}
+                alwaysCallOnOpen={false}
+              />
             </div>
           </div>
         </div>
         <div className="space-y-4 pt-4">
           {/* Switches de controle da rodada */}
-          {selectedRound && (
+          {adminSelectedRound && (
             <>
               <Card className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm mb-1">Permitir Novos Palpites</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {allowsNewBets ? 'Novos palpites podem ser criados para esta rodada' : 'Novos palpites estão bloqueados para esta rodada'}
-                    </p>
+                    {updateGamesLoading || allowsNewBets === undefined ? (
+                      <Skeleton className="h-4 w-48 mt-1" />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {allowsNewBets ? 'Novos palpites podem ser criados para esta rodada' : 'Novos palpites estão bloqueados para esta rodada'}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {savingAllowsNewBets && (
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     )}
-                    <Switch
-                      checked={allowsNewBets}
-                      onCheckedChange={handleToggleAllowsNewBets}
-                      disabled={savingAllowsNewBets}
-                    />
+                    {updateGamesLoading || allowsNewBets === undefined ? (
+                      <Skeleton className="h-6 w-11 rounded-full" />
+                    ) : (
+                      <Switch
+                        checked={allowsNewBets}
+                        onCheckedChange={handleToggleAllowsNewBets}
+                        disabled={savingAllowsNewBets}
+                      />
+                    )}
                   </div>
                 </div>
               </Card>
@@ -1239,19 +1294,27 @@ export default function AdminUpdateGames() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm mb-1">Rodada Ativa</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {isActive ? 'Rodada visível no menu e aceita palpites' : 'Rodada oculta do menu e não aceita palpites'}
-                    </p>
+                    {updateGamesLoading || isActive === undefined ? (
+                      <Skeleton className="h-4 w-48 mt-1" />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {isActive ? 'Rodada visível no menu e aceita palpites' : 'Rodada oculta do menu e não aceita palpites'}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {savingIsActive && (
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     )}
-                    <Switch
-                      checked={isActive}
-                      onCheckedChange={handleToggleIsActive}
-                      disabled={savingIsActive}
-                    />
+                    {updateGamesLoading || isActive === undefined ? (
+                      <Skeleton className="h-6 w-11 rounded-full" />
+                    ) : (
+                      <Switch
+                        checked={isActive}
+                        onCheckedChange={handleToggleIsActive}
+                        disabled={savingIsActive}
+                      />
+                    )}
                   </div>
                 </div>
               </Card>
@@ -1904,7 +1967,7 @@ export default function AdminUpdateGames() {
             </>
           )}
 
-          {selectedRound && (
+          {adminSelectedRound && (
             <>
               <Card className="p-4 border-red-500/30 bg-red-500/5">
                 <div className="space-y-3">
@@ -1970,7 +2033,7 @@ export default function AdminUpdateGames() {
                     <div className="p-2 bg-red-500/20 rounded-full">
                       <Trash2 className="h-5 w-5 text-red-500" />
                     </div>
-                    <h2 className="text-xl font-bold">Excluir Rodada {selectedRound}</h2>
+                    <h2 className="text-xl font-bold">Excluir Rodada {adminSelectedRound}</h2>
                   </div>
 
                   <div className="space-y-4 mb-6">
@@ -2049,7 +2112,7 @@ export default function AdminUpdateGames() {
                     <div className="p-2 bg-red-500/20 rounded-full">
                       <Trash2 className="h-5 w-5 text-red-500" />
                     </div>
-                    <h2 className="text-xl font-bold">Deletar Todos os Palpites - Rodada {selectedRound}</h2>
+                    <h2 className="text-xl font-bold">Deletar Todos os Palpites - Rodada {adminSelectedRound}</h2>
                   </div>
 
                   <div className="space-y-4 mb-6">

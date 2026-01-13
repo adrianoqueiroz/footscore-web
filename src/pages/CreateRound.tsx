@@ -324,7 +324,7 @@ export default function CreateRound({ onSave, onCancel }: CreateRoundProps) {
                             style={{ height: '32px', lineHeight: '32px', paddingTop: '0', paddingBottom: '0', boxSizing: 'border-box' }}
                           >
                             <option value="">Selecione</option>
-                            {config.getGameTimes().map(time => (
+                            {config.getGameTimesSync().map(time => (
                               <option key={time} value={time}>{time}</option>
                             ))}
                             <option value="__custom__">Outro horário...</option>
@@ -472,7 +472,7 @@ export default function CreateRound({ onSave, onCancel }: CreateRoundProps) {
                         style={{ height: '32px', lineHeight: '32px', paddingTop: '0', paddingBottom: '0', boxSizing: 'border-box' }}
                       >
                         <option value="">Selecione</option>
-                        {config.getGameTimes().map(time => (
+                        {config.getGameTimesSync().map(time => (
                           <option key={time} value={time}>{time}</option>
                         ))}
                         <option value="__custom__">Outro horário...</option>

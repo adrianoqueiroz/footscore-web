@@ -23,7 +23,7 @@ export default function Matches() {
   const [matchesLoading, setMatchesLoading] = useState(true)
   const [allowsNewBets, setAllowsNewBets] = useState(true)
   const [isBlocked, setIsBlocked] = useState(false)
-  const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds } = useRoundSelector()
+  const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds, validateSelection } = useRoundSelector()
   const [showPulsingBall, setShowPulsingBall] = useState(false)
   const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
   const [showBlockedMessage, setShowBlockedMessage] = useState(false)
@@ -118,6 +118,13 @@ export default function Matches() {
       setIsBlocked(false)
     }
   }, [selectedRound])
+
+  // Validar seleção quando rodadas mudam
+  useEffect(() => {
+    if (rounds.length > 0) {
+      validateSelection()
+    }
+  }, [rounds, validateSelection])
 
   const [excludedMatches, setExcludedMatches] = useState<Match[]>([])
 

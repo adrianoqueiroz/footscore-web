@@ -12,5 +12,6 @@ export function useRoundSelector() {
     setSelectedRound: context.setSelectedRound,
     loading: context.loading,
     refreshRounds: context.refreshRounds,
+    validateSelection: context.validateSelection,
   }
 }

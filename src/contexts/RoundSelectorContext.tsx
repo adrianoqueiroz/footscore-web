@@ -7,6 +7,7 @@ interface RoundSelectorContextType {
   setSelectedRound: (round: number | undefined) => void
   loading: boolean
   refreshRounds: () => Promise<void>
+  validateSelection: () => void
 }
 
 const RoundSelectorContext = createContext<RoundSelectorContextType | null>(null)
@@ -20,7 +21,7 @@ export function RoundSelectorProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       const roundsData = await matchService.getRounds()
-      
+
       // Verificar se roundsData é um array válido
       if (!Array.isArray(roundsData)) {
         console.error('Error loading rounds: Invalid response format', roundsData)
@@ -28,21 +29,17 @@ export function RoundSelectorProvider({ children }: { children: ReactNode }) {
         setLoading(false)
         return
       }
-      
+
       setRounds(roundsData)
-      
+
       // Usar função de atualização para acessar o estado atual
       setSelectedRound(currentSelected => {
-        // Se preserveSelection é true e há uma rodada selecionada, manter ela mesmo que não esteja mais na lista
-        if (preserveSelection && currentSelected) {
-          return currentSelected
-        }
-        
-        // Preservar a rodada selecionada se ela ainda estiver disponível
+        // Sempre verificar se a rodada selecionada está disponível nas rodadas ativas
+        // Não preservar seleção de rodadas inativas
         if (currentSelected && roundsData.includes(currentSelected)) {
           return currentSelected
         }
-        
+
         // Se não há rodada selecionada ou a selecionada não está mais disponível
         if (roundsData.length > 0) {
           // Selecionar a última rodada disponível
@@ -93,6 +90,21 @@ export function RoundSelectorProvider({ children }: { children: ReactNode }) {
     await loadRounds(false) // Refresh manual: pode mudar seleção se necessário
   }
 
+  // Função para validar seleção atual contra rodadas disponíveis
+  const validateSelection = () => {
+    setSelectedRound(currentSelected => {
+      if (currentSelected && rounds.includes(currentSelected)) {
+        return currentSelected
+      }
+
+      if (rounds.length > 0) {
+        return rounds[rounds.length - 1]
+      } else {
+        return undefined
+      }
+    })
+  }
+
   return (
     <RoundSelectorContext.Provider
       value={{
@@ -101,6 +113,7 @@ export function RoundSelectorProvider({ children }: { children: ReactNode }) {
         setSelectedRound,
         loading,
         refreshRounds,
+        validateSelection,
       }}
     >
       {children}

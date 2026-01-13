@@ -61,7 +61,7 @@ export default function Tickets() {
   const [activeTab, setActiveTab] = useState<TabView>('my')
   const [showPulsingBall, setShowPulsingBall] = useState(false)
   const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
-  const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds } = useRoundSelector()
+  const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds, validateSelection } = useRoundSelector()
   const toast = useToastContext()
   const confirm = useConfirmContext()
 
@@ -196,6 +196,13 @@ export default function Tickets() {
   useEffect(() => {
     loadPageData()
   }, [loadPageData])
+
+  // Validar seleção quando rodadas mudam
+  useEffect(() => {
+    if (rounds.length > 0) {
+      validateSelection()
+    }
+  }, [rounds, validateSelection])
 
   // Atualizar status da rodada quando selectedRound mudar e periodicamente
   useEffect(() => {

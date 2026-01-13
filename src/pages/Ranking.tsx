@@ -46,7 +46,7 @@ export default function Ranking() {
   const [view, setView] = useState<RankingView>('all')
   const [showPulsingBall, setShowPulsingBall] = useState(false)
   const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
-  const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds } = useRoundSelector()
+  const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds, validateSelection } = useRoundSelector()
   const user = authService.getCurrentUser()
   const showRankingLoading = useDelayedLoading(rankingLoading)
 
@@ -64,6 +64,13 @@ export default function Ranking() {
     reloadOnFocus: true,
     delay: 500,
   })
+
+  // Validar seleção quando rodadas mudam
+  useEffect(() => {
+    if (rounds.length > 0) {
+      validateSelection()
+    }
+  }, [rounds, validateSelection])
 
   // Debug: Monitorar mudanças no isRoundFinished
   useEffect(() => {
