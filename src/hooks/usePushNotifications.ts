@@ -17,13 +17,30 @@ export function usePushNotifications() {
 
   // Função para verificar o estado atual da subscription
   const checkSubscriptionStatus = useCallback(async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!('serviceWorker' in navigator)) {
+      return false
+    }
+
+    // Verificar se é iOS (que pode ter PushManager disponível apenas após registro do SW)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+    // Se não tem PushManager e não é iOS, não há suporte
+    if (!('PushManager' in window) && !isIOS) {
+      console.log('[PushNotifications] PushManager not available and not iOS')
       return false
     }
 
     try {
       console.log('[PushNotifications] 🔍 Checking subscription status...')
       const registration = await navigator.serviceWorker.ready
+
+      // Verificar se PushManager está disponível no registration
+      if (!registration.pushManager) {
+        console.log('[PushNotifications] PushManager not available in registration')
+        return false
+      }
+
       const subscription = await registration.pushManager.getSubscription()
       const hasSubscription = !!subscription
 
@@ -43,12 +60,50 @@ export function usePushNotifications() {
 
   // Verificar suporte, permissão e estado inicial da subscription
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true)
-      setPermission(Notification.permission)
+    // Verificar se é iOS Safari (que tem suporte limitado mas ainda funciona)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
-      // Verificar estado atual da subscription
-      checkSubscriptionStatus()
+    // Para iOS, ser mais permissivo - se tem service worker, assumir que pode ter suporte
+    const hasBasicSupport = 'serviceWorker' in navigator
+    const hasFullSupport = 'PushManager' in window
+    const shouldSupport = hasBasicSupport && (hasFullSupport || isIOS)
+
+    console.log('[PushNotifications] Device detection:', {
+      userAgent: navigator.userAgent.substring(0, 50) + '...',
+      isIOS,
+      hasBasicSupport,
+      hasFullSupport,
+      shouldSupport
+    })
+
+    if (shouldSupport) {
+      // Para iOS, pode ser que o PushManager não esteja disponível imediatamente
+      // Vamos tentar verificar se fica disponível após o service worker estar pronto
+      const initializePushSupport = async () => {
+        try {
+          const registration = await navigator.serviceWorker.ready
+          const hasPushManager = !!registration.pushManager
+
+          console.log('[PushNotifications] Service worker ready, PushManager available:', hasPushManager)
+
+          if (hasPushManager || isIOS) {
+            setIsSupported(true)
+            setPermission(Notification.permission)
+
+            // Verificar estado atual da subscription
+            checkSubscriptionStatus()
+          } else {
+            console.log('[PushNotifications] PushManager not available even after SW ready')
+            setIsSupported(false)
+          }
+        } catch (error) {
+          console.error('[PushNotifications] Error initializing push support:', error)
+          setIsSupported(false)
+        }
+      }
+
+      initializePushSupport()
 
       // Adicionar listener para mensagens do service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
@@ -75,6 +130,9 @@ export function usePushNotifications() {
       return () => {
         clearInterval(permissionCheckInterval)
       }
+    } else {
+      console.log('[PushNotifications] Push notifications not supported on this device')
+      setIsSupported(false)
     }
   }, [checkSubscriptionStatus, permission])
 
@@ -113,7 +171,7 @@ export function usePushNotifications() {
     if (currentPermission !== 'granted') {
       console.warn('[PushNotifications] Permissão não concedida:', currentPermission)
       setPermission(currentPermission)
-      
+
       // Se for 'default', tentar solicitar permissão
       if (currentPermission === 'default') {
         const granted = await requestPermission()
@@ -130,11 +188,18 @@ export function usePushNotifications() {
       const registration = await navigator.serviceWorker.ready
       console.log('[PushNotifications] Fazendo subscribe...')
 
+      // Verificar se o PushManager está disponível (pode não estar em alguns dispositivos iOS)
+      if (!registration.pushManager) {
+        console.warn('[PushNotifications] PushManager não disponível neste dispositivo')
+        setIsLoading(false)
+        return false
+      }
+
       // Verificar se já existe uma subscription
       const existingSubscription = await registration.pushManager.getSubscription()
       if (existingSubscription) {
         console.log('[PushNotifications] Subscription já existe, atualizando no backend...')
-        
+
         // Atualizar no backend mesmo que já exista (pode ter mudado o usuário ou keys)
         const subscriptionData = {
           endpoint: existingSubscription.endpoint,
@@ -184,7 +249,7 @@ export function usePushNotifications() {
       }
     } catch (error: any) {
       console.error('[PushNotifications] Erro no subscribe:', error)
-      
+
       // Se o erro for porque já existe subscription, verificar e atualizar estado
       if (error?.message?.includes('already subscribed') || error?.code === 0) {
         console.log('[PushNotifications] Tentando verificar subscription existente...')
@@ -206,17 +271,24 @@ export function usePushNotifications() {
     setIsLoading(true)
     try {
       const registration = await navigator.serviceWorker.ready
+
+      if (!registration.pushManager) {
+        console.warn('[PushNotifications] PushManager não disponível para cancelar')
+        setIsLoading(false)
+        return false
+      }
+
       const subscription = await registration.pushManager.getSubscription()
 
       if (subscription) {
         const endpoint = subscription.endpoint
-        
+
         // Desinscrever localmente primeiro
         const unsubscribed = await subscription.unsubscribe()
-        
+
         if (unsubscribed) {
           console.log('[PushNotifications] Subscription cancelada localmente')
-          
+
           // Tentar remover do backend (não bloquear se falhar)
           try {
             await apiService.post('/notifications/unsubscribe', { endpoint })
@@ -224,7 +296,7 @@ export function usePushNotifications() {
           } catch (error) {
             console.warn('[PushNotifications] Erro ao remover do backend (continuando):', error)
           }
-          
+
           setIsSubscribed(false)
           return true
         } else {
