@@ -1,5 +1,6 @@
-// Service Worker básico para PWA com Push Notifications
-const CACHE_NAME = 'footscore-v1.0.1'
+// Service Worker para PWA com Push Notifications
+// Compatível com Chrome, Safari (macOS e iOS PWA)
+const CACHE_NAME = 'footscore-v1.0.2'
 const urlsToCache = [
   '/',
   '/index.html',
@@ -87,23 +88,31 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   console.log('[SW] 📨 ===== PUSH EVENT RECEIVED =====')
   console.log('[SW] 📨 Timestamp:', new Date().toISOString())
-  console.log('[SW] 📨 User Agent:', navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other')
-  console.log('[SW] 📨 Data:', event.data ? event.data.text() : 'null')
-  console.log('[SW] 📨 Event properties:', Object.keys(event))
-  console.log('[SW] 📨 User visible only:', event.data ? 'yes' : 'no')
+  
+  // Detectar navegador
+  const isSafari = !navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Safari')
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  console.log('[SW] 📨 Browser:', isSafari ? (isIOS ? 'iOS Safari' : 'macOS Safari') : 'Chrome/Other')
+  console.log('[SW] 📨 Data available:', event.data ? 'yes' : 'no')
 
+  // Configurações de notificação compatíveis com Safari
   let notificationData = {
     title: '🔔 Notificação',
     body: 'Nova notificação',
     icon: '/icon-192x192.jpg',
     badge: '/icon-192x192.jpg',
-    tag: 'notification',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
+    tag: 'notification-' + Date.now(),
     data: {}
   }
 
-  console.log('[SW] Notification data inicial:', notificationData)
+  // Safari tem suporte limitado para algumas opções
+  // Só adicionar vibrate e requireInteraction para não-Safari
+  if (!isSafari) {
+    notificationData.requireInteraction = false
+    notificationData.vibrate = [200, 100, 200]
+  }
+
+  console.log('[SW] 📱 Notification config for', isSafari ? 'Safari' : 'Chrome')
 
   // Tentar parsear dados do push
   if (event.data) {
