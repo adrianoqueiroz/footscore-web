@@ -1,3 +1,4 @@
+import React from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useHapticFeedback } from '@/hooks/useHapticFeedback'
@@ -12,11 +13,15 @@ interface SwitchProps {
 export default function Switch({ checked, onCheckedChange, disabled, className }: SwitchProps) {
   const triggerHaptic = useHapticFeedback()
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (!disabled) {
       // Trigger haptic feedback ao alternar o switch
       triggerHaptic('light')
       onCheckedChange(!checked)
+    } else {
+      console.log('[Switch] Tentativa de clique bloqueada - switch está disabled')
     }
   }
 

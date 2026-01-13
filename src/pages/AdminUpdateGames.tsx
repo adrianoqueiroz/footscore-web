@@ -391,7 +391,7 @@ export default function AdminUpdateGames() {
     if (newValue === true) {
       const hasStartedMatches = updateGamesMatches.some(m => m.status === 'live' || m.status === 'finished')
       if (hasStartedMatches) {
-        toast.error('Não é possível permitir novos palpites quando houver jogos em andamento ou finalizados')
+        toast.error('Novos palpites só podem ser permitidos quando todos os jogos estiverem agendados')
         return
       }
     }
@@ -1219,13 +1219,7 @@ export default function AdminUpdateGames() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm mb-1">Permitir Novos Palpites</h3>
                     <p className="text-xs text-muted-foreground">
-                      {(() => {
-                        const hasStartedMatches = updateGamesMatches.some(m => m.status === 'live' || m.status === 'finished')
-                        if (hasStartedMatches && !allowsNewBets) {
-                          return 'Novos palpites só podem ser permitidos quando todos os jogos estiverem agendados'
-                        }
-                        return allowsNewBets ? 'Novos palpites podem ser criados para esta rodada' : 'Novos palpites estão bloqueados para esta rodada'
-                      })()}
+                      {allowsNewBets ? 'Novos palpites podem ser criados para esta rodada' : 'Novos palpites estão bloqueados para esta rodada'}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1235,7 +1229,7 @@ export default function AdminUpdateGames() {
                     <Switch
                       checked={allowsNewBets}
                       onCheckedChange={handleToggleAllowsNewBets}
-                      disabled={savingAllowsNewBets || (updateGamesMatches.some(m => m.status === 'live' || m.status === 'finished') && !allowsNewBets)}
+                      disabled={savingAllowsNewBets}
                     />
                   </div>
                 </div>

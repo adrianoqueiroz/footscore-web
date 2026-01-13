@@ -326,7 +326,9 @@ export default function EditRound() {
   const loadMatches = async (round: number) => {
     setLoadingMatches(true)
     try {
-      const { matches: data, allowsNewBets: allows, isActive: active } = await matchService.getMatchesByRoundWithStatus(round)
+      const { matches: data, storedAllowsNewBets: storedAllows, allowsNewBets: computedAllows, isActive: active } = await matchService.getMatchesByRoundWithStatus(round)
+      const allows = storedAllows ?? computedAllows
+      console.log(`[loadMatches] Round ${round}: storedAllowsNewBets=${storedAllows}, computedAllows=${computedAllows}, final allows=${allows}, isActive=${active}`)
       const matchesWithDefaults = data.map(m => ({
         ...m,
         includeInRound: m.includeInRound ?? true,
@@ -350,8 +352,12 @@ export default function EditRound() {
       })
       setCustomTimeMatches(customMatches)
       
-      setAllowsNewBets(allows)
-      setIsActive(active !== undefined ? active : true) // Default true se não existir
+      // Garantir que os valores são booleanos
+      const finalAllows = Boolean(allows)
+      const finalIsActive = active !== undefined ? Boolean(active) : true
+      console.log(`[loadMatches] Atualizando estados: allowsNewBets=${finalAllows}, isActive=${finalIsActive}`)
+      setAllowsNewBets(finalAllows)
+      setIsActive(finalIsActive)
 
       // Definir data/hora global baseada no primeiro jogo da rodada
       if (data.length > 0) {
@@ -507,25 +513,42 @@ export default function EditRound() {
 
   const handleToggleAllowsNewBets = async (newValue: boolean) => {
     if (!selectedRound) return
-    
+
+    console.log(`[handleToggleAllowsNewBets] Tentando ${newValue ? 'ativar' : 'desativar'} allowsNewBets para rodada ${selectedRound}`)
+    console.log(`[handleToggleAllowsNewBets] Estado atual: allowsNewBets=${allowsNewBets}, matches count=${matches.length}`)
+    console.log(`[handleToggleAllowsNewBets] Status dos matches:`, matches.map(m => ({ id: m.id, status: m.status })))
+
     // Se tentando ativar, verificar se há jogos em andamento ou finalizados
     if (newValue === true) {
-      const hasStartedMatches = matches.some(m => m.status === 'live' || m.status === 'finished')
+      const startedMatches = matches.filter(m => m.status === 'live' || m.status === 'finished')
+      const hasStartedMatches = startedMatches.length > 0
+      console.log(`[handleToggleAllowsNewBets] Verificando jogos em andamento: hasStartedMatches=${hasStartedMatches}, count=${startedMatches.length}`)
       if (hasStartedMatches) {
-        toast.error('Não é possível permitir novos palpites quando houver jogos em andamento ou finalizados')
+        toast.error('Novos palpites só podem ser permitidos quando todos os jogos estiverem agendados')
         return
       }
     }
-    
+
+    // Não atualizar estado local imediatamente - esperar resposta do backend
     setSavingAllowsNewBets(true)
+
     try {
-      await matchService.updateRoundAllowsNewBets(selectedRound, newValue)
-      // Recarregar dados do backend para garantir sincronização
+      console.log(`[handleToggleAllowsNewBets] Chamando API para atualizar allowsNewBets=${newValue}`)
+      const response = await matchService.updateRoundAllowsNewBets(selectedRound, newValue)
+      // Atualizar estados imediatamente com valores retornados do backend
+      console.log(`[handleToggleAllowsNewBets] Resposta do backend:`, response)
+      const finalAllows = Boolean(response.allowsNewBets)
+      const finalIsActive = Boolean(response.isActive)
+      console.log(`[handleToggleAllowsNewBets] Atualizando estados: allowsNewBets=${finalAllows}, isActive=${finalIsActive}`)
+      setAllowsNewBets(finalAllows)
+      setIsActive(finalIsActive)
+      // Recarregar dados do backend para garantir sincronização completa
       await loadMatches(selectedRound)
+      console.log(`[handleToggleAllowsNewBets] Dados recarregados com sucesso`)
     } catch (error) {
       console.error('Error updating allowsNewBets:', error)
       displayMessage('Erro ao atualizar. Tente novamente.', 'error')
-      // Recarregar dados do backend em caso de erro para garantir estado correto
+      // Em caso de erro, recarregar dados para manter consistência
       await loadMatches(selectedRound)
     } finally {
       setSavingAllowsNewBets(false)
@@ -534,16 +557,22 @@ export default function EditRound() {
 
   const handleToggleIsActive = async (newValue: boolean) => {
     if (!selectedRound) return
-    
+
+    // Não atualizar estado local imediatamente - esperar resposta do backend
     setSavingIsActive(true)
+
     try {
-      await matchService.updateRoundIsActive(selectedRound, newValue)
-      // Recarregar dados do backend para garantir sincronização
+      const response = await matchService.updateRoundIsActive(selectedRound, newValue)
+      // Atualizar estados imediatamente com valores retornados do backend
+      console.log(`[handleToggleIsActive] Resposta do backend:`, response)
+      setAllowsNewBets(Boolean(response.allowsNewBets))
+      setIsActive(Boolean(response.isActive))
+      // Recarregar dados do backend para garantir sincronização completa
       await loadMatches(selectedRound)
     } catch (error) {
       console.error('Error updating isActive:', error)
       displayMessage('Erro ao atualizar. Tente novamente.', 'error')
-      // Recarregar dados do backend em caso de erro para garantir estado correto
+      // Em caso de erro, recarregar dados para manter consistência
       await loadMatches(selectedRound)
     } finally {
       setSavingIsActive(false)
@@ -838,13 +867,7 @@ export default function EditRound() {
             <div className="flex-1">
               <h3 className="font-semibold text-sm lg:text-base mb-1">Permitir Novos Palpites</h3>
               <p className="text-xs lg:text-sm text-muted-foreground">
-                {(() => {
-                  const hasStartedMatches = matches.some(m => m.status === 'live' || m.status === 'finished')
-                  if (hasStartedMatches && !allowsNewBets) {
-                    return 'Novos palpites só podem ser permitidos quando todos os jogos estiverem agendados'
-                  }
-                  return allowsNewBets ? 'Novos palpites podem ser criados para esta rodada' : 'Novos palpites estão bloqueados para esta rodada'
-                })()}
+                {allowsNewBets ? 'Novos palpites podem ser criados para esta rodada' : 'Novos palpites estão bloqueados para esta rodada'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -854,7 +877,7 @@ export default function EditRound() {
               <Switch
                 checked={allowsNewBets}
                 onCheckedChange={handleToggleAllowsNewBets}
-                disabled={savingAllowsNewBets || (matches.some(m => m.status === 'live' || m.status === 'finished') && !allowsNewBets)}
+                disabled={savingAllowsNewBets}
               />
             </div>
           </div>
@@ -1915,19 +1938,18 @@ export default function EditRound() {
                       // Salvar no localStorage para manter como padrão
                       localStorage.setItem('lastSelectedRound', round.toString())
                     }}
-                  onOpen={async () => {
-                    // Recarregar rodadas quando abrir o dropdown (apenas se necessário)
-                    // Verificar se já temos rodadas carregadas antes de recarregar
-                    if (rounds.length === 0) {
+                    onOpen={async () => {
+                      // Na página de editar rodada, sempre carregar todas as rodadas (incluindo inativas)
+                      // para permitir que o admin possa ativar rodadas desativadas
                       try {
                         const roundsData = await matchService.getAllRounds()
                         const sortedRounds = [...roundsData].sort((a, b) => a - b)
                         setRounds(sortedRounds)
                       } catch (error) {
-                        console.error('Error reloading rounds:', error)
+                        console.error('Error reloading all rounds:', error)
                       }
-                    }
-                  }}
+                    }}
+                    alwaysCallOnOpen={true}
                     className="w-40 lg:w-48"
                   />
                   <Button

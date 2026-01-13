@@ -71,7 +71,7 @@ export const matchService = {
     }
   },
 
-  async getMatchesByRoundWithStatus(round: number): Promise<{ matches: Match[]; allowsNewBets: boolean; isBlocked: boolean; isActive?: boolean }> {
+  async getMatchesByRoundWithStatus(round: number): Promise<{ matches: Match[]; allowsNewBets: boolean; storedAllowsNewBets?: boolean; isBlocked: boolean; isActive?: boolean }> {
     try {
       const response = await apiService.get<Match[] | { matches: Match[]; round: number; allowsNewBets: boolean; isBlocked: boolean; isActive?: boolean }>(`/matches?round=${round}`)
       
@@ -80,6 +80,7 @@ export const matchService = {
         return {
           matches: response.matches,
           allowsNewBets: response.allowsNewBets,
+          storedAllowsNewBets: response.storedAllowsNewBets ?? response.allowsNewBets,
           isBlocked: response.isBlocked,
           isActive: response.isActive
         }
@@ -89,6 +90,7 @@ export const matchService = {
       return {
         matches: response as Match[],
         allowsNewBets: true,
+        storedAllowsNewBets: true,
         isBlocked: false,
         isActive: true
       }
@@ -168,18 +170,26 @@ export const matchService = {
     }
   },
 
-  async updateRoundAllowsNewBets(round: number, allowsNewBets: boolean): Promise<void> {
+  async updateRoundAllowsNewBets(round: number, allowsNewBets: boolean): Promise<{ allowsNewBets: boolean; isActive: boolean }> {
     try {
-      await apiService.patch(`/matches/round/${round}/allows-new-bets`, { allowsNewBets })
+      const response = await apiService.patch<{ allowsNewBets: boolean; isActive: boolean }>(`/matches/round/${round}/allows-new-bets`, { allowsNewBets })
+      return {
+        allowsNewBets: Boolean(response.allowsNewBets ?? allowsNewBets),
+        isActive: Boolean(response.isActive ?? true)
+      }
     } catch (error) {
       console.error('Error updating round allowsNewBets:', error)
       throw error
     }
   },
 
-  async updateRoundIsActive(round: number, isActive: boolean): Promise<void> {
+  async updateRoundIsActive(round: number, isActive: boolean): Promise<{ allowsNewBets: boolean; isActive: boolean }> {
     try {
-      await apiService.patch(`/matches/round/${round}/is-active`, { isActive })
+      const response = await apiService.patch<{ allowsNewBets: boolean; isActive: boolean }>(`/matches/round/${round}/is-active`, { isActive })
+      return {
+        allowsNewBets: Boolean(response.allowsNewBets ?? true),
+        isActive: Boolean(response.isActive ?? isActive)
+      }
     } catch (error) {
       console.error('Error updating round isActive:', error)
       throw error
