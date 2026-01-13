@@ -169,14 +169,39 @@ self.addEventListener('push', (event) => {
     clients.matchAll({
       type: 'window',
       includeUncontrolled: true
-    }).then((clientList) => {
+    }).then(async (clientList) => {
       // Verificar se há algum cliente visível
-      const hasVisibleClient = clientList.some(client => {
-        // Verificar se o cliente está visível ou focado
-        // visibilityState pode ser 'visible', 'hidden', ou 'prerender'
-        // focused indica se a janela tem foco
-        return client.visibilityState === 'visible' || client.focused === true
-      })
+      let hasVisibleClient = false
+      
+      for (const client of clientList) {
+        try {
+          // Verificar visibilityState (pode não estar disponível em todos os navegadores)
+          const visibilityState = client.visibilityState
+          const isFocused = client.focused
+          
+          // Cliente está visível se visibilityState é 'visible' OU se está focado
+          if (visibilityState === 'visible' || isFocused === true) {
+            hasVisibleClient = true
+            
+            // Enviar mensagem para o cliente sobre o push recebido (para atualizar badge)
+            // Mesmo que não mostremos a notificação push, queremos que o cliente saiba
+            try {
+              client.postMessage({
+                type: 'push_received',
+                data: notificationData.data,
+                title: notificationData.title,
+                body: notificationData.body
+              })
+            } catch (msgError) {
+              console.log('[SW] Não foi possível enviar mensagem para cliente:', msgError)
+            }
+            break
+          }
+        } catch (err) {
+          // Se houver erro ao verificar um cliente, continuar verificando os outros
+          console.log('[SW] Erro ao verificar cliente:', err)
+        }
+      }
 
       if (hasVisibleClient) {
         console.log('[SW] ⏭️ App está aberto e visível - pulando notificação push (notificação interna será exibida)')
@@ -189,11 +214,30 @@ self.addEventListener('push', (event) => {
       console.log('[SW] 📋 Title:', notificationData.title)
       console.log('[SW] 📋 Body:', notificationData.body)
 
+      // Tentar enviar mensagem para qualquer cliente (mesmo que não visível) para atualizar badge
+      // Isso garante que quando o usuário abrir o app, o badge esteja atualizado
+      for (const client of clientList) {
+        try {
+          client.postMessage({
+            type: 'push_received',
+            data: notificationData.data,
+            title: notificationData.title,
+            body: notificationData.body
+          })
+          break // Enviar apenas para um cliente
+        } catch (msgError) {
+          // Ignorar erro
+        }
+      }
+
       try {
         console.log('[SW] 🔄 Calling showNotification...')
         return self.registration.showNotification(notificationData.title, notificationData)
           .then(() => {
             console.log('[SW] ✅ showNotification called successfully')
+            
+            // Atualizar badge quando mostrar notificação push
+            // O badge será atualizado quando o usuário abrir o app e processar a mensagem
           })
           .catch((error) => {
             console.error('[SW] ❌ FAILED TO SHOW NOTIFICATION:', error.message)

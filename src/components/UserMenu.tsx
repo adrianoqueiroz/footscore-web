@@ -114,7 +114,7 @@ export default function UserMenu({ userName, userAvatar, onLogout, onEditProfile
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-48 rounded-lg border border-border bg-background/95 backdrop-blur shadow-lg z-50"
+            className="absolute right-0 mt-3 w-48 rounded-xl border border-border bg-background/95 backdrop-blur shadow-lg z-[60]"
           >
             {/* Header do Menu */}
             <div className="border-b border-border p-3">

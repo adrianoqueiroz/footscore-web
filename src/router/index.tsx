@@ -25,11 +25,13 @@ import AppHeader from '@/components/AppHeader'
 import BottomNav from '@/components/ui/BottomNav'
 import { usePWANavigation } from '@/hooks/usePWANavigation'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { useNotificationListener } from '@/hooks/useNotificationListener'
 import PullToRefreshIndicator from '@/components/ui/PullToRefreshIndicator'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ConfirmProvider } from '@/contexts/ConfirmContext'
 import { RoundSelectorProvider } from '@/contexts/RoundSelectorContext'
 import { ConnectionProvider } from '@/contexts/ConnectionContext'
+import { NotificationProvider } from '@/contexts/NotificationContext'
 
 const AdminRoute = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -80,37 +82,39 @@ const AppRoutes = () => {
     <ConnectionProvider>
       <ToastProvider>
         <ConfirmProvider>
-          <RoundSelectorProvider>
-            <Router>
-              <Routes>
-                <Route element={<PublicRoute />}>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                </Route>
-                <Route element={<PrivateRoute />}>
-                  <Route path="/rounds" element={<Matches />} />
-                  <Route path="/games" element={<Predictions />} />
-                  <Route path="/tickets" element={<Tickets />} />
-                  <Route path="/tickets/:ticketId" element={<TicketDetails />} />
-                  <Route path="/ranking" element={<Ranking />} />
-                  <Route path="/debug-push" element={<DebugPush />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/edit-phone" element={<EditPhone />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route element={<AdminRoute />}>
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/admin/create-round" element={<AdminCreateRound />} />
-                    <Route path="/admin/update-games" element={<AdminUpdateGames />} />
-                    <Route path="/admin/manage-palpites" element={<AdminManagePalpites />} />
-                    <Route path="/admin/manage-users" element={<AdminManageUsers />} />
-                    <Route path="/admin/settings" element={<AdminSettings />} />
-                    <Route path="/edit-round" element={<EditRound />} />
+          <NotificationProvider>
+            <RoundSelectorProvider>
+              <Router>
+                <Routes>
+                  <Route element={<PublicRoute />}>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
                   </Route>
-                  <Route path="/" element={<Navigate to="/rounds" replace />} />
-                </Route>
-              </Routes>
-            </Router>
-          </RoundSelectorProvider>
+                  <Route element={<PrivateRoute />}>
+                    <Route path="/rounds" element={<Matches />} />
+                    <Route path="/games" element={<Predictions />} />
+                    <Route path="/tickets" element={<Tickets />} />
+                    <Route path="/tickets/:ticketId" element={<TicketDetails />} />
+                    <Route path="/ranking" element={<Ranking />} />
+                    <Route path="/debug-push" element={<DebugPush />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/edit-phone" element={<EditPhone />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route element={<AdminRoute />}>
+                      <Route path="/admin" element={<Admin />} />
+                      <Route path="/admin/create-round" element={<AdminCreateRound />} />
+                      <Route path="/admin/update-games" element={<AdminUpdateGames />} />
+                      <Route path="/admin/manage-palpites" element={<AdminManagePalpites />} />
+                      <Route path="/admin/manage-users" element={<AdminManageUsers />} />
+                      <Route path="/admin/settings" element={<AdminSettings />} />
+                      <Route path="/edit-round" element={<EditRound />} />
+                    </Route>
+                    <Route path="/" element={<Navigate to="/rounds" replace />} />
+                  </Route>
+                </Routes>
+              </Router>
+            </RoundSelectorProvider>
+          </NotificationProvider>
         </ConfirmProvider>
       </ToastProvider>
     </ConnectionProvider>
@@ -168,6 +172,9 @@ const MainLayout = ({ user }: { user: User }) => {
   const navigate = useNavigate()
   usePWANavigation()
   const pullToRefreshState = usePullToRefresh()
+  
+  // Escutar eventos SSE e adicionar notificações automaticamente
+  useNotificationListener()
 
   // Listener para mensagens do service worker (navegação via push notification)
   useEffect(() => {
