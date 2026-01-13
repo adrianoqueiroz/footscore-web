@@ -35,6 +35,12 @@ import { RoundSelectorProvider } from '@/contexts/RoundSelectorContext'
 import { ConnectionProvider } from '@/contexts/ConnectionContext'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 
+// Componente de redirect inteligente para a rota raiz
+const RootRedirect = () => {
+  const isAuthenticated = authService.isAuthenticated()
+  return <Navigate to={isAuthenticated ? '/rounds' : '/login'} replace />
+}
+
 const AdminRoute = () => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -88,6 +94,8 @@ const AppRoutes = () => {
             <RoundSelectorProvider>
               <Router>
                 <Routes>
+                  {/* Rota raiz - redirect inteligente baseado em autenticação */}
+                  <Route path="/" element={<RootRedirect />} />
                   <Route element={<PublicRoute />}>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
@@ -113,7 +121,6 @@ const AppRoutes = () => {
                       <Route path="/admin/settings" element={<AdminSettings />} />
                       <Route path="/edit-round" element={<EditRound />} />
                     </Route>
-                    <Route path="/" element={<Navigate to="/rounds" replace />} />
                   </Route>
                 </Routes>
               </Router>
@@ -127,7 +134,7 @@ const AppRoutes = () => {
 
 const PublicRoute = () => {
   const isAuthenticated = authService.isAuthenticated()
-  return isAuthenticated ? <Navigate to="/" /> : <Outlet />
+  return isAuthenticated ? <Navigate to="/rounds" /> : <Outlet />
 }
 
 const PrivateRoute = () => {

@@ -299,7 +299,7 @@ export default function Matches() {
       />
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl md:text-3xl font-bold">Jogos</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Início</h1>
           <RoundSelector
             rounds={rounds}
             selectedRound={selectedRound}

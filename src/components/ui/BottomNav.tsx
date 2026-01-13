@@ -1,22 +1,21 @@
 import React from 'react'
-import { Home, Ticket, Trophy, Settings, HelpCircle, User } from 'lucide-react'
+import { Home, Ticket, Trophy, Settings, User } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useHapticFeedback } from '@/hooks/useHapticFeedback'
 
-type NavigationItem = 'rounds' | 'tickets' | 'ranking' | 'admin' | 'about'
+type NavigationItem = 'rounds' | 'tickets' | 'ranking' | 'admin'
 
 interface BottomNavProps {
   isAdmin?: boolean
 }
 
 const navItems: { key: NavigationItem; label: string; icon: typeof Home; path: string }[] = [
-  { key: 'rounds', label: 'Jogos', icon: Home, path: '/rounds' },
+  { key: 'rounds', label: 'Início', icon: Home, path: '/rounds' },
   { key: 'tickets', label: 'Palpites', icon: Ticket, path: '/tickets' },
   { key: 'ranking', label: 'Ranking', icon: Trophy, path: '/ranking' },
   { key: 'admin', label: 'Admin', icon: Settings, path: '/admin' },
-  { key: 'about', label: 'Sobre', icon: HelpCircle, path: '/about' },
 ]
 
 export default function BottomNav({ isAdmin = false }: BottomNavProps) {

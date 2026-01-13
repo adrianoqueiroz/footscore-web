@@ -1,14 +1,18 @@
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Bell, LogOut, ChevronRight } from 'lucide-react'
+import { ArrowLeft, User, Bell, LogOut, ChevronRight, HelpCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import { authService } from '@/services/auth.service'
+import { useAvatarCache } from '@/hooks/useAvatarCache'
 import ContentWrapper from '@/components/ui/ContentWrapper'
 
 export default function Account() {
   const navigate = useNavigate()
   const user = authService.getCurrentUser()
+
+  // Usar cache de avatar
+  const { avatarUrl: cachedAvatar } = useAvatarCache(user?.avatar)
 
   const handleLogout = () => {
     authService.logout()
@@ -27,6 +31,12 @@ export default function Account() {
       title: 'Preferências de Notificação',
       description: 'Configure suas notificações',
       onClick: () => navigate('/notifications'),
+    },
+    {
+      icon: HelpCircle,
+      title: 'Sobre o App',
+      description: 'Conheça mais sobre o FootScore',
+      onClick: () => navigate('/about'),
     },
     {
       icon: LogOut,
@@ -60,18 +70,35 @@ export default function Account() {
           </div>
         </div>
 
-        {/* Informações do Usuário */}
-        <Card className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-8 h-8 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-lg">{user.name}</p>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            </div>
+        {/* Avatar/Foto do Usuário */}
+        <div className="flex flex-col items-center mb-2">
+          <div className="relative">
+            {cachedAvatar ? (
+              <div className="relative h-24 w-24 rounded-full border-2 border-primary shadow-lg p-0.5 bg-background">
+                <div className="h-full w-full rounded-full overflow-hidden">
+                  <img
+                    src={cachedAvatar}
+                    alt={user.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/20 border-2 border-primary shadow-lg flex items-center justify-center p-0.5 bg-background">
+                <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/30 to-primary/20 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-primary">
+                    {user.name
+                      .split(' ')
+                      .slice(0, 2)
+                      .map(part => part.charAt(0).toUpperCase())
+                      .join('') || 'U'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        </Card>
+          <p className="mt-3 text-lg font-semibold">{user.name}</p>
+        </div>
 
         {/* Menu de Opções */}
         <div className="space-y-3">
