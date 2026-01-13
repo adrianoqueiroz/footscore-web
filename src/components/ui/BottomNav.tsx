@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useHapticFeedback } from '@/hooks/useHapticFeedback'
+import { authService } from '@/services/auth.service'
+import { useAvatarCache } from '@/hooks/useAvatarCache'
 
 type NavigationItem = 'rounds' | 'tickets' | 'ranking' | 'admin'
 
@@ -23,6 +25,17 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
   const location = useLocation()
   const triggerHaptic = useHapticFeedback()
   const items = isAdmin ? navItems : navItems.filter(item => item.key !== 'admin')
+
+  // Avatar logic
+  const user = authService.getCurrentUser()
+  const { avatarUrl: cachedAvatar, error: avatarError } = useAvatarCache(user?.avatar)
+
+  // Pega as iniciais do nome
+  const initials = user?.name
+    .split(' ')
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
 
   // Detectar se está no iOS
   const isIOS = React.useMemo(() => {
@@ -49,19 +62,19 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
     return navItems.find(i => location.pathname.startsWith(i.path))?.key || null
   }, [location.pathname, location.search])
 
-  // Verificar se estamos na página de conta
-  const isAccountPage = location.pathname === '/account'
+  // Verificar se estamos na página de conta ou perfil
+  const isAccountPage = location.pathname === '/account' || location.pathname === '/profile'
 
   return (
     <>
       {/* Mobile: Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 safe-area-inset-bottom overflow-x-hidden md:hidden">
         <div className="mx-auto flex max-w-md w-full items-center px-2 py-2">
-          {/* Navigation Items - Left */}
-          <div className="flex flex-1 items-center justify-around">
-            {items.map((item) => {
+          {/* All Navigation Items - Equally distributed */}
+          <div className="flex w-full items-center justify-around">
+            {[...items, { key: 'account', label: 'Conta', icon: () => null, path: '/account' }].map((item) => {
               const Icon = item.icon
-              const isActive = current === item.key
+              const isActive = item.key === 'account' ? isAccountPage : current === item.key
 
               return (
                 <motion.button
@@ -109,7 +122,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                     }
                   } : undefined}
                   className={cn(
-                    'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-3 transition-colors',
+                    'relative flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 transition-colors',
                     'touch-manipulation select-none', // Otimizações específicas para toque
                     isIOS && 'cursor-pointer', // Cursor específico para iOS
                     isActive ? 'text-primary' : 'text-muted-foreground'
@@ -135,56 +148,43 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                       }}
                     />
                   )}
-                  <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+                  {item.key === 'account' ? (
+                    <div className={cn(
+                      'relative flex h-5 w-5 items-center justify-center rounded-full font-semibold transition-all overflow-hidden',
+                      isAccountPage
+                        ? 'border border-primary shadow-sm'
+                        : 'border border-border'
+                    )}>
+                      {cachedAvatar ? (
+                        <img
+                          src={cachedAvatar}
+                          alt={user?.name || 'User'}
+                          className="h-full w-full object-cover rounded-full"
+                          loading="lazy"
+                        />
+                      ) : user?.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user?.name || 'User'}
+                          className="h-full w-full object-cover rounded-full"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className={cn(
+                          'text-[10px] font-bold leading-none',
+                          isAccountPage ? 'text-primary' : 'text-muted-foreground'
+                        )}>
+                          {initials || 'U'}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+                  )}
                   <span className="text-xs font-medium">{item.label}</span>
                 </motion.button>
               )
             })}
-          </div>
-
-          {/* Profile Icon - Right */}
-          <div className="flex items-center justify-center">
-            <motion.button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                navigate('/account')
-              }}
-              onTouchStart={isIOS ? (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                navigate('/account')
-              } : undefined}
-              className={cn(
-                'relative flex flex-col items-center justify-center gap-1 rounded-lg py-3 px-3 transition-colors',
-                'touch-manipulation select-none', // Otimizações específicas para toque
-                isIOS && 'cursor-pointer', // Cursor específico para iOS
-                isAccountPage ? 'text-primary' : 'text-muted-foreground'
-              )}
-              style={isIOS ? {
-                WebkitTapHighlightColor: 'transparent', // Remove highlight azul do iOS
-                WebkitTouchCallout: 'none', // Previne menu de contexto
-                WebkitUserSelect: 'none', // Previne seleção de texto
-              } : undefined}
-              whileTap={{ scale: 0.95 }}
-            >
-              {isAccountPage && (
-                <motion.div
-                  className="absolute -top-0.5 left-1/2 h-1 w-8 rounded-full bg-primary pointer-events-none"
-                  initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
-                  animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
-                  transition={{
-                    type: 'spring',
-                    stiffness: 400,
-                    damping: 30,
-                    duration: 0.4,
-                    opacity: { duration: 0.15 }
-                  }}
-                />
-              )}
-              <User className={cn('h-5 w-5', isAccountPage && 'text-primary')} />
-              <span className="text-xs font-medium">Conta</span>
-            </motion.button>
           </div>
         </div>
       </nav>
@@ -233,6 +233,69 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
               </motion.button>
             )
           })}
+
+          {/* Desktop: Account Item with Avatar */}
+          <motion.button
+            onClick={() => {
+              if (location.pathname !== '/account') {
+                navigate('/account', { replace: false })
+              }
+            }}
+            className={cn(
+              'relative flex items-center gap-3 rounded-lg px-6 py-4 transition-all text-left',
+              'hover:bg-secondary/50 hover:text-foreground',
+              isAccountPage
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'text-muted-foreground'
+            )}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {isAccountPage && (
+              <motion.div
+                className="absolute left-0 top-4 h-6 w-1 rounded-r-full bg-primary pointer-events-none"
+                initial={{ scaleY: 0, opacity: 0 }}
+                animate={{ scaleY: 1, opacity: 1 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 30,
+                  duration: 0.4,
+                  opacity: { duration: 0.15 }
+                }}
+              />
+            )}
+            <div className={cn(
+              'relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all overflow-hidden flex-shrink-0',
+              isAccountPage
+                ? 'border-2 border-primary shadow-sm'
+                : 'border-2 border-border'
+            )}>
+              {cachedAvatar ? (
+                <img
+                  src={cachedAvatar}
+                  alt={user?.name || 'User'}
+                  className="h-full w-full object-cover rounded-full"
+                  loading="lazy"
+                />
+              ) : user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user?.name || 'User'}
+                  className="h-full w-full object-cover rounded-full"
+                  loading="lazy"
+                />
+              ) : (
+                <span className={cn(
+                  'text-xs font-semibold',
+                  isAccountPage ? 'text-primary' : 'text-muted-foreground'
+                )}>
+                  {initials || 'U'}
+                </span>
+              )}
+            </div>
+            <span className="text-sm font-medium">Conta</span>
+          </motion.button>
         </div>
       </nav>
     </>

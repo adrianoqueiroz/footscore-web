@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Bell, Save, BellOff, BellRing, Bug, X } from 'lucide-react'
+import { ArrowLeft, Bell, Save, BellOff, BellRing } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -11,50 +11,9 @@ import { usePushNotifications } from '@/hooks/usePushNotifications'
 import ContentWrapper from '@/components/ui/ContentWrapper'
 import { getTeamDisplayName } from '@/lib/teamNames'
 
-// Hook para capturar console.log para debug mobile
-function useDebugLogs() {
-  const [logs, setLogs] = useState<string[]>([])
-  const originalConsoleLog = useRef<typeof console.log>()
-
-  useEffect(() => {
-    // Salvar o console.log original
-    originalConsoleLog.current = console.log
-
-    // Override console.log para capturar logs do PushNotifications
-    const newConsoleLog = (...args: any[]) => {
-      const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ')
-      
-      // Filtrar apenas logs de PushNotifications
-      if (message.includes('[PushNotifications]') || message.includes('[TestSupport]')) {
-        setLogs(prev => [...prev.slice(-50), `${new Date().toLocaleTimeString()}: ${message}`])
-      }
-      
-      // Chamar o original
-      originalConsoleLog.current?.apply(console, args)
-    }
-
-    console.log = newConsoleLog
-
-    return () => {
-      // Restaurar console.log original
-      if (originalConsoleLog.current) {
-        console.log = originalConsoleLog.current
-      }
-    }
-  }, [])
-
-  const clearLogs = () => setLogs([])
-
-  return { logs, clearLogs }
-}
-
 export default function NotificationSettings() {
   const navigate = useNavigate()
   const toast = useToastContext()
-  const { logs, clearLogs } = useDebugLogs()
-  const [showDebug, setShowDebug] = useState(false)
 
   // Push notifications hook
   const {
@@ -491,56 +450,6 @@ export default function NotificationSettings() {
           <Save className="h-4 w-4 mr-2" />
           {saving ? 'Salvando...' : 'Salvar Preferências'}
         </Button>
-
-        {/* Painel de Debug (para dispositivos móveis) */}
-        <div className="mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDebug(!showDebug)}
-            className="w-full text-xs"
-          >
-            <Bug className="h-3 w-3 mr-1" />
-            {showDebug ? 'Esconder Debug' : 'Mostrar Debug'}
-          </Button>
-        </div>
-
-        {showDebug && (
-          <Card className="p-3 mt-2">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">Debug Info</h3>
-              <Button variant="outline" size="sm" onClick={clearLogs} className="text-xs h-6 px-2">
-                <X className="h-3 w-3 mr-1" /> Limpar
-              </Button>
-            </div>
-
-            {/* Status atual */}
-            <div className="text-xs space-y-1 mb-3 p-2 bg-muted rounded">
-              <div><strong>Suportado:</strong> {pushSupported ? '✅' : '❌'}</div>
-              <div><strong>Permissão:</strong> {pushPermission}</div>
-              <div><strong>Inscrito:</strong> {isPushSubscribed ? '✅' : '❌'}</div>
-              <div><strong>iOS:</strong> {isIOS ? '✅' : '❌'}</div>
-              <div><strong>PWA:</strong> {isPWA ? '✅' : '❌'}</div>
-              <div><strong>Notification API:</strong> {'Notification' in window ? '✅' : '❌'}</div>
-              <div><strong>ServiceWorker:</strong> {'serviceWorker' in navigator ? '✅' : '❌'}</div>
-              <div><strong>PushManager:</strong> {'PushManager' in window ? '✅' : '❌'}</div>
-            </div>
-
-            {/* Logs */}
-            <div className="text-xs">
-              <div className="font-semibold mb-1">Logs ({logs.length}):</div>
-              <div className="max-h-48 overflow-y-auto bg-black/80 text-green-400 p-2 rounded font-mono text-[10px] leading-tight">
-                {logs.length === 0 ? (
-                  <div className="text-gray-500">Nenhum log ainda. Clique em Ativar para ver logs.</div>
-                ) : (
-                  logs.map((log, i) => (
-                    <div key={i} className="mb-1 border-b border-gray-800 pb-1">{log}</div>
-                  ))
-                )}
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
     </ContentWrapper>
   )
