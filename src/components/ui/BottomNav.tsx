@@ -69,7 +69,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
     <>
       {/* Mobile: Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 safe-area-inset-bottom overflow-x-hidden md:hidden">
-        <div className="mx-auto flex max-w-md w-full items-center px-2 py-2">
+        <div className="mx-auto flex max-w-md w-full items-center px-2 pt-3 pb-6">
           {/* All Navigation Items - Equally distributed */}
           <div className="flex w-full items-center justify-around">
             {[...items, { key: 'account', label: 'Conta', icon: () => null, path: '/account' }].map((item) => {
@@ -122,7 +122,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                     }
                   } : undefined}
                   className={cn(
-                    'relative flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 transition-colors',
+                    'relative flex flex-col items-center justify-center gap-0 rounded-lg px-2 pt-0 pb-0.5 transition-colors',
                     'touch-manipulation select-none', // Otimizações específicas para toque
                     isIOS && 'cursor-pointer', // Cursor específico para iOS
                     isActive ? 'text-primary' : 'text-muted-foreground'
@@ -136,7 +136,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                 >
                   {isActive && (
                     <motion.div
-                      className="absolute -top-0.5 left-1/2 h-1 w-8 rounded-full bg-primary pointer-events-none"
+                      className="absolute -top-2 left-1/2 h-1 w-10 rounded-full bg-primary pointer-events-none"
                       initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
                       animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
                       transition={{
@@ -150,7 +150,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                   )}
                   {item.key === 'account' ? (
                     <div className={cn(
-                      'relative flex h-5 w-5 items-center justify-center rounded-full font-semibold transition-all overflow-hidden',
+                      'relative flex h-6 w-6 items-center justify-center rounded-full font-semibold transition-all overflow-hidden',
                       isAccountPage
                         ? 'border border-primary shadow-sm'
                         : 'border border-border'
@@ -171,7 +171,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                         />
                       ) : (
                         <span className={cn(
-                          'text-[10px] font-bold leading-none',
+                          'text-[11px] font-bold leading-none',
                           isAccountPage ? 'text-primary' : 'text-muted-foreground'
                         )}>
                           {initials || 'U'}
@@ -179,7 +179,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                       )}
                     </div>
                   ) : (
-                    <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+                    <Icon className={cn('h-6 w-6', isActive && 'text-primary')} />
                   )}
                   <span className="text-xs font-medium">{item.label}</span>
                 </motion.button>

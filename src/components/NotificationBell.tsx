@@ -9,6 +9,7 @@ export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [bellKey, setBellKey] = useState(0) // Para reiniciar a animação
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -47,6 +48,16 @@ export default function NotificationBell() {
       markAllAsRead()
     }
   }, [isOpen, unreadCount, markAllAsRead])
+
+  // Reiniciar animação do sino quando há novas notificações
+  const prevUnreadCountRef = useRef(unreadCount)
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current) {
+      // Houve um aumento no contador, reiniciar animação
+      setBellKey(prev => prev + 1)
+    }
+    prevUnreadCountRef.current = unreadCount
+  }, [unreadCount])
 
   // Ordenar notificações: não lidas primeiro, depois por timestamp (mais recentes primeiro)
   const sortedNotifications = [...notifications].sort((a, b) => {
@@ -92,33 +103,40 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Botão do sininho */}
-      <motion.button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative w-10 h-10 rounded-full hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-0 touch-manipulation flex items-center justify-center"
-        whileTap={{ scale: 0.9 }}
-        style={{
-          WebkitTapHighlightColor: 'rgba(0,0,0,0)',
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
-          userSelect: 'none',
-          outline: 'none',
-          WebkitAppearance: 'none',
-          backgroundColor: 'transparent',
-          boxShadow: 'none'
-        }}
-        aria-label="Notificações"
-      >
-        <Bell className="h-5 w-5 text-foreground" />
+      <div className="relative">
+        <motion.button
+          key={bellKey} // Reinicia a animação quando bellKey muda
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-10 h-10 rounded-full hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-0 touch-manipulation flex items-center justify-center"
+          whileTap={{ scale: 0.9 }}
+          animate={unreadCount > 0 ? {
+            rotate: [0, -15, 15, -15, 15, 0],
+          } : {}}
+          transition={unreadCount > 0 ? {
+            duration: 0.8, // Mais rápido
+            ease: "easeInOut"
+          } : {}}
+          style={{
+            WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+            outline: 'none',
+            WebkitAppearance: 'none',
+            backgroundColor: 'transparent',
+            boxShadow: 'none'
+          }}
+          aria-label="Notificações"
+        >
+          <Bell className="h-5 w-5 text-foreground" />
+        </motion.button>
+
         {unreadCount > 0 && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
-          >
+          <div className="absolute top-0.5 right-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 z-10">
             {unreadCount > 99 ? '99+' : unreadCount}
-          </motion.div>
+          </div>
         )}
-      </motion.button>
+      </div>
 
       {/* Dropdown */}
       <AnimatePresence>
