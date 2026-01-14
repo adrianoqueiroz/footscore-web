@@ -145,7 +145,7 @@ export default function Profile() {
           <div className="space-y-4">
             {/* Nome */}
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
@@ -167,7 +167,7 @@ export default function Profile() {
 
             {/* Email (somente leitura) */}
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                 <Mail className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
@@ -178,7 +178,7 @@ export default function Profile() {
 
             {/* Telefone */}
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <Phone className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
@@ -200,7 +200,7 @@ export default function Profile() {
 
             {/* Cidade */}
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
@@ -223,7 +223,7 @@ export default function Profile() {
 
             {/* Apelido */}
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <UserCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">

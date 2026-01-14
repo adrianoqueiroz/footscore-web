@@ -1,9 +1,16 @@
 import { useEffect } from 'react'
 import { useMatchEvents } from './useMatchEvents'
 import { useNotifications } from '@/contexts/NotificationContext'
+import { notificationService } from '@/services/notification.service'
 
 /**
- * Hook que escuta eventos SSE e adiciona notificações automaticamente
+ * Hook que escuta eventos SSE e adiciona notificações ao sininho
+ *
+ * SISTEMA CENTRALIZADO DE NOTIFICAÇÕES:
+ * - SSE (sininho): Processado aqui no frontend
+ * - Push Notifications: Enviadas pelo backend via eventService.sendNotification()
+ * - Toast: Via notificationService.showToast()
+ *
  * Deve ser usado no nível mais alto da aplicação (no router)
  */
 export function useNotificationListener() {
@@ -11,44 +18,9 @@ export function useNotificationListener() {
 
   // Escutar eventos de atualizações
   useMatchEvents((event) => {
-    if (event.type === 'score_update' && event.data.scoreChanged) {
-      // Adicionar notificação de gol (backend já filtra por preferências)
-      const goalScorer = event.data.goalScorer
-      const homeTeam = event.data.homeTeam
-      const awayTeam = event.data.awayTeam
-      const homeScore = event.data.homeScore
-      const awayScore = event.data.awayScore
-      const isGoalCancelled = event.data.isGoalCancelled || false
+    // Notificações de gol foram removidas do sininho conforme solicitação
 
-      let title = '⚽ Gol!'
-      let body = `${homeTeam} ${homeScore} x ${awayScore} ${awayTeam}`
-
-      if (goalScorer === 'home') {
-        title = isGoalCancelled 
-          ? `❌ Gol do ${homeTeam} anulado!`
-          : `⚽ Gol do ${homeTeam}!`
-      } else if (goalScorer === 'away') {
-        title = isGoalCancelled
-          ? `❌ Gol do ${awayTeam} anulado!`
-          : `⚽ Gol do ${awayTeam}!`
-      }
-
-      addNotification({
-        title,
-        body,
-        type: 'goal',
-        data: {
-          matchId: event.data.matchId,
-          round: event.data.round,
-          homeTeam,
-          awayTeam,
-          homeScore,
-          awayScore,
-          goalScorer,
-          isGoalCancelled
-        }
-      })
-    } else if (event.type === 'round_bets_status') {
+    if (event.type === 'round_bets_status') {
       // Notificação quando rodada começa ou para de aceitar palpites
       const { round, allowsNewBets, isBlocked } = event.data
       

@@ -36,6 +36,8 @@ export default function NotificationSettings() {
   // Detectar ambiente iOS PWA
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
                 (window.navigator as any).standalone === true
   const isIOSPWA = isIOS && isPWA
@@ -238,7 +240,7 @@ export default function NotificationSettings() {
   }
 
   return (
-    <ContentWrapper>
+    <ContentWrapper className="pt-6 md:pt-0">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
@@ -251,80 +253,106 @@ export default function NotificationSettings() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Preferências de Notificação</h1>
+            <h1 className="text-2xl font-bold">Notificações</h1>
             <p className="text-sm text-muted-foreground">Configure quando deseja receber notificações</p>
           </div>
         </div>
 
         {/* Controle Principal de Notificações Push */}
         <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                {isPushSubscribed ? (
-                  <BellRing className="h-5 w-5 text-green-500" />
-                ) : (
-                  <BellOff className="h-5 w-5 text-muted-foreground" />
-                )}
-                <p className="font-medium text-sm">Notificações Push</p>
-              </div>
-                <p className="text-xs text-muted-foreground">
+          {/* Título */}
+          <div className="flex items-center gap-2 mb-3">
+            {isPushSubscribed ? (
+              <BellRing className="h-5 w-5 text-green-500" />
+            ) : (
+              <BellOff className="h-5 w-5 text-muted-foreground" />
+            )}
+            <h2 className="text-lg font-semibold">Notificações Push</h2>
+          </div>
+
+          {/* Conteúdo */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">
                   {isPushSubscribed
                     ? 'Notificações push estão ativadas. Você receberá notificações no seu dispositivo.'
                     : effectivePushSupported
                       ? 'Ative as notificações push para receber alertas no seu dispositivo.'
-                      : 'Notificações push não são totalmente suportadas neste navegador. Funcionalidade limitada.'
+                      : ''
                   }
                 </p>
-            </div>
-            {effectivePushSupported ? (
-              <Button
-                variant={isPushSubscribed ? "outline" : "primary"}
-                size="sm"
-                onClick={handleTogglePushNotifications}
-                disabled={pushLoading}
-                className="min-w-[100px]"
-              >
-                {pushLoading ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                    Aguarde...
-                  </>
-                ) : isPushSubscribed ? (
-                  <>
-                    <BellOff className="h-4 w-4 mr-2" />
-                    Desativar
-                  </>
-                ) : (
-                  <>
-                    <BellRing className="h-4 w-4 mr-2" />
-                    Ativar
-                  </>
-                )}
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <div className="text-xs text-muted-foreground px-3 py-2 bg-muted rounded-md">
-                  Não suportado
-                </div>
+              </div>
+              {effectivePushSupported ? (
                 <Button
-                  variant="outline"
+                  variant={isPushSubscribed ? "outline" : "primary"}
                   size="sm"
-                  onClick={handleTestSupport}
-                  disabled={testingSupport}
-                  className="text-xs"
+                  onClick={handleTogglePushNotifications}
+                  disabled={pushLoading}
+                  className="min-w-[100px]"
                 >
-                  {testingSupport ? (
+                  {pushLoading ? (
                     <>
-                      <div className="h-3 w-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
-                      Testando...
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      Aguarde...
+                    </>
+                  ) : isPushSubscribed ? (
+                    <>
+                      <BellOff className="h-4 w-4 mr-2" />
+                      Desativar
                     </>
                   ) : (
-                    'Testar Suporte'
+                    <>
+                      <BellRing className="h-4 w-4 mr-2" />
+                      Ativar
+                    </>
                   )}
                 </Button>
-              </div>
-            )}
+              ) : (
+                <div className="flex flex-col gap-3 w-full">
+                  {/* Texto e botão lado a lado */}
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground flex-1">
+                      Funcionalidade limitada neste navegador.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTestSupport}
+                      disabled={testingSupport}
+                      className="text-xs"
+                    >
+                      {testingSupport ? (
+                        <>
+                          <div className="h-3 w-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
+                          Testando...
+                        </>
+                      ) : (
+                        'Testar Suporte'
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Dicas PWA para dispositivos móveis */}
+                  {isMobile && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                      <p className="text-sm font-medium mb-2 text-blue-800 dark:text-blue-200">💡 Instale como App</p>
+                      <div className="space-y-2 text-sm">
+                        <p className="text-blue-700 dark:text-blue-300">
+                          <strong>iOS:</strong> Toque em compartilhar → "Adicionar à Tela Inicial"
+                        </p>
+                        <p className="text-blue-700 dark:text-blue-300">
+                          <strong>Android:</strong> Toque no menu (⋮) → "Adicionar à tela inicial"
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                          Após instalar, você receberá notificações push completas!
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </Card>
 
@@ -332,17 +360,9 @@ export default function NotificationSettings() {
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2 mb-4">
             <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Preferências de Notificação</h2>
+            <h2 className="text-xl font-bold">Preferências</h2>
           </div>
 
-          {/* Aviso quando notificações push não estão ativas */}
-          {!isPushSubscribed && !effectivePushSupported && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                ⚠️ Notificações push não são totalmente suportadas neste navegador. Você ainda pode configurar preferências, mas pode não receber notificações push.
-              </p>
-            </div>
-          )}
 
           <div className="space-y-4">
             {/* 1. Início/Encerramento de Palpites */}
@@ -388,6 +408,7 @@ export default function NotificationSettings() {
                     checked={notifyGoalsAllTeams}
                     onCheckedChange={(checked) => {
                       setNotifyGoalsAllTeams(checked)
+                      // Quando ativa "Todos", automaticamente desativa a opção do time do coração
                     }}
                   />
                 </div>
@@ -397,24 +418,19 @@ export default function NotificationSettings() {
                   <div className="flex-1">
                     <p className="font-medium text-sm">Time do Coração</p>
                     <p className="text-xs text-muted-foreground">
-                      Receber notificações do seu time do coração
+                      Receber notificações apenas do seu time do coração
                     </p>
                   </div>
                   <Switch
-                    checked={favoriteTeam !== null}
+                    checked={!notifyGoalsAllTeams && favoriteTeam !== null}
                     onCheckedChange={(checked) => {
-                      if (!notifyGoalsAllTeams) {
-                        if (checked) {
-                          // Se ativou mas não tem time selecionado, selecionar o primeiro
-                          if (!favoriteTeam) {
-                            setFavoriteTeam(TEAMS[0] || null)
-                          }
-                        } else {
-                          setFavoriteTeam(null)
-                        }
+                      if (checked) {
+                        // Quando ativa time do coração, desativa "Todos"
+                        setNotifyGoalsAllTeams(false)
                       }
+                      // Se desativando, apenas mantém o estado atual
                     }}
-                    disabled={notifyGoalsAllTeams}
+                    disabled={!favoriteTeam || notifyGoalsAllTeams}
                   />
                 </div>
 
@@ -423,8 +439,7 @@ export default function NotificationSettings() {
                   <select
                     value={favoriteTeam || ''}
                     onChange={(e) => setFavoriteTeam(e.target.value || null)}
-                    disabled={notifyGoalsAllTeams}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Selecione um time</option>
                     {TEAMS.map(team => (

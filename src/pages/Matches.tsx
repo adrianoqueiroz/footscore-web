@@ -391,9 +391,9 @@ export default function Matches() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       {/* Dia da semana em cima, data e hora embaixo */}
-                      <div className="flex flex-col items-start justify-center flex-shrink-0 min-w-[3rem]">
+                      <div className="flex flex-col items-start justify-center flex-shrink-0 min-w-[4rem]">
                         <span className={cn(
-                          "text-[9px] font-medium uppercase tracking-wide leading-tight block",
+                          "text-[10px] font-medium uppercase tracking-wide leading-tight block",
                           displayInfo.isLive && "text-yellow-300",
                           displayInfo.isFinished && "text-green-300",
                           !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
@@ -401,7 +401,7 @@ export default function Matches() {
                           {displayInfo.dateDisplay ? format(new Date(`${match.date}T${match.time}`), "EEE", { locale: ptBR }) : "---"}
                         </span>
                         <span className={cn(
-                          "text-[8px] font-medium leading-tight block",
+                          "text-[9px] font-medium leading-tight block",
                           displayInfo.isLive && "text-yellow-300",
                           displayInfo.isFinished && "text-green-300",
                           !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
@@ -420,21 +420,21 @@ export default function Matches() {
 
                       {/* Time casa 0 x 0 time visitante */}
                       <div className="flex-1 flex items-center min-w-0">
-                        {/* Nome time casa */}
-                        <div className="flex-1 flex justify-end pr-1.5 min-w-0">
+                        {/* Time casa */}
+                        <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                          <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-6 w-6 mb-0.5" noCircle />
                           <span className={cn(
-                            "text-xs font-semibold truncate text-right leading-tight",
+                            "text-xs font-semibold truncate text-center leading-tight max-w-[5.5rem]",
                             displayInfo.isLive && "text-yellow-300",
                             displayInfo.isFinished && "text-green-300",
                             !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
                           )}>{getTeamDisplayName(match.homeTeam)}</span>
                         </div>
 
-                        {/* Escudos e placar centralizados */}
-                        <div className="w-[70px] flex items-center gap-1 justify-center flex-shrink-0 px-1">
-                          <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-5 w-5" noCircle />
+                        {/* Placar centralizado */}
+                        <div className="w-[60px] flex items-center justify-center flex-shrink-0">
                           <span className={cn(
-                            "text-xs font-bold flex-shrink-0 min-w-[2rem] text-center",
+                            "text-base font-bold flex-shrink-0 min-w-[3rem] text-center",
                             displayInfo.showScore && displayInfo.scoreDisplay
                               ? displayInfo.isLive
                                 ? "text-yellow-300"
@@ -445,13 +445,13 @@ export default function Matches() {
                           )}>
                             {displayInfo.showScore && displayInfo.scoreDisplay ? displayInfo.scoreDisplay : "0 × 0"}
                           </span>
-                          <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-5 w-5" noCircle />
                         </div>
 
-                        {/* Nome time visitante */}
-                        <div className="flex-1 flex justify-start pl-1.5 min-w-0">
+                        {/* Time visitante */}
+                        <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                          <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-6 w-6 mb-0.5" noCircle />
                           <span className={cn(
-                            "text-xs font-semibold truncate text-left leading-tight",
+                            "text-xs font-semibold truncate text-center leading-tight max-w-[5.5rem]",
                             displayInfo.isLive && "text-yellow-300",
                             displayInfo.isFinished && "text-green-300",
                             !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"

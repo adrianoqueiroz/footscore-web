@@ -35,10 +35,9 @@ import { RoundSelectorProvider } from '@/contexts/RoundSelectorContext'
 import { ConnectionProvider } from '@/contexts/ConnectionContext'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 
-// Componente de redirect inteligente para a rota raiz
+// Componente de redirect para a rota raiz - sempre vai para login
 const RootRedirect = () => {
-  const isAuthenticated = authService.isAuthenticated()
-  return <Navigate to={isAuthenticated ? '/rounds' : '/login'} replace />
+  return <Navigate to="/login" replace />
 }
 
 const AdminRoute = () => {

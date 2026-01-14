@@ -94,7 +94,7 @@ export default function NotificationBell() {
       {/* Botão do sininho */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-10 h-10 rounded-full border-2 border-foreground/20 hover:border-foreground/40 transition-colors focus:outline-none focus:ring-0 touch-manipulation flex items-center justify-center"
+        className="relative w-10 h-10 rounded-full hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-0 touch-manipulation flex items-center justify-center"
         whileTap={{ scale: 0.9 }}
         style={{
           WebkitTapHighlightColor: 'rgba(0,0,0,0)',
@@ -113,7 +113,7 @@ export default function NotificationBell() {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
+            className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </motion.div>

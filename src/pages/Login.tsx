@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import { GoogleLogin } from '@react-oauth/google'
@@ -17,6 +17,13 @@ export default function Login() {
   const [formLoading, setFormLoading] = useState(false)
   const navigate = useNavigate()
   const toast = useToastContext()
+
+  // Verificar se usuário já está logado e redirecionar
+  useEffect(() => {
+    if (authService.isAuthenticated()) {
+      navigate('/rounds', { replace: true })
+    }
+  }, [navigate])
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     if (!credentialResponse.credential) {

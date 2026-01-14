@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Bell, LogOut, ChevronRight, HelpCircle } from 'lucide-react'
+import { User, Bell, LogOut, ChevronRight, HelpCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -55,19 +55,7 @@ export default function Account() {
     <ContentWrapper>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(-1)}
-            className="rounded-full h-10 w-10 p-0 shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">Conta</h1>
-            <p className="text-sm text-muted-foreground">Gerencie seu perfil e preferências</p>
-          </div>
+        <div className="mb-4">
         </div>
 
         {/* Avatar/Foto do Usuário */}
@@ -118,7 +106,7 @@ export default function Account() {
                       item.danger ? 'text-red-400 hover:bg-red-500/10' : ''
                     }`}
                   >
-                    <div className={`p-3 rounded-lg ${item.danger ? 'bg-red-500/10' : 'bg-primary/10'}`}>
+                    <div className={`p-3 rounded-full ${item.danger ? 'bg-red-500/10' : 'bg-primary/10'}`}>
                       <Icon className={`w-6 h-6 ${item.danger ? 'text-red-400' : 'text-primary'}`} />
                     </div>
                     <div className="flex-1 text-left">

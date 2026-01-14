@@ -721,8 +721,8 @@ export default function TicketDetails() {
           </motion.div>
           )}
 
-        {/* Confirmed Box - não mostrar para admin */}
-        {ticket.status === 'confirmed' && !isFromAdmin && (
+        {/* Confirmed Box - não mostrar para admin nem quando vem do ranking */}
+        {ticket.status === 'confirmed' && !isFromAdmin && !isFromRanking && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
