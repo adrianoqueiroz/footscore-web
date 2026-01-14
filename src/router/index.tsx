@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { authService } from '@/services/auth.service'
 import { User } from '@/types'
@@ -180,8 +180,10 @@ const PrivateRoute = () => {
 
 const MainLayout = ({ user }: { user: User }) => {
   const navigate = useNavigate()
+  const mainContentRef = useRef<HTMLElement>(null)
+  
   usePWANavigation()
-  const pullToRefreshState = usePullToRefresh()
+  const pullToRefreshState = usePullToRefresh({ contentRef: mainContentRef })
   
   // Escutar eventos SSE e adicionar notificações automaticamente
   useNotificationListener()
@@ -204,15 +206,30 @@ const MainLayout = ({ user }: { user: User }) => {
     }
   }, [navigate])
 
+  // Estilos para o efeito rubber band no conteúdo
+  const mainStyle: React.CSSProperties = {
+    minHeight: 0,
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    // Aplica o transform para o efeito rubber band
+    transform: pullToRefreshState.isPulling 
+      ? `translateY(${pullToRefreshState.visualOffset}px)` 
+      : 'none',
+    // Transição suave apenas quando está voltando (não durante o pull)
+    transition: !pullToRefreshState.isPulling && !pullToRefreshState.isRefreshing
+      ? 'transform 0.3s ease-out'
+      : 'none',
+  }
+
   return (
     <div className="flex flex-col h-full bg-background md:flex-row">
       <AppHeader />
       <BottomNav isAdmin={!!user?.isAdmin} />
-      <main className="flex-1 pb-20 md:pb-0 md:ml-64 md:pt-16 md:pl-0" style={{
-        minHeight: 0,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch'
-      }}>
+      <main 
+        ref={mainContentRef}
+        className="flex-1 pb-20 md:pb-0 md:ml-64 md:pt-16 md:pl-0" 
+        style={mainStyle}
+      >
         <Outlet />
       </main>
 
@@ -221,7 +238,8 @@ const MainLayout = ({ user }: { user: User }) => {
         isPulling={pullToRefreshState.isPulling}
         pullDistance={pullToRefreshState.pullDistance}
         canRefresh={pullToRefreshState.canRefresh}
-        isReloading={pullToRefreshState.isReloading}
+        isRefreshing={pullToRefreshState.isRefreshing}
+        visualOffset={pullToRefreshState.visualOffset}
       />
     </div>
   )

@@ -1,68 +1,80 @@
-import React from 'react'
 import { RefreshCw } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+
+const PULL_THRESHOLD = 220 // Deve corresponder ao valor no hook
 
 /**
  * Componente visual que mostra o feedback durante pull-to-refresh
+ * Aparece/desaparece instantaneamente sem animações de transição
+ * O reload acontece quando o usuário SOLTA após ultrapassar o threshold
  */
 interface PullToRefreshIndicatorProps {
   isPulling: boolean
   pullDistance: number
   canRefresh: boolean
-  isReloading?: boolean
+  isRefreshing?: boolean
+  visualOffset?: number
 }
 
 export default function PullToRefreshIndicator({
   isPulling,
   pullDistance,
   canRefresh,
-  isReloading = false
+  isRefreshing = false,
+  visualOffset = 0
 }: PullToRefreshIndicatorProps) {
-  // Calcula a opacidade baseada na distância do pull
-  const opacity = Math.min(pullDistance / 80, 1)
+  // Não renderiza nada se não está puxando nem recarregando
+  // Isso garante sumiço INSTANTÂNEO quando o usuário solta
+  if (!isPulling && !isRefreshing) {
+    return null
+  }
+
+  // Calcula a opacidade baseada na distância do pull (0 a 1)
+  const opacity = Math.min(pullDistance / (PULL_THRESHOLD * 0.5), 1)
+  
+  // Calcula a rotação progressiva baseada na distância (0 a 360 graus)
+  const progressRotation = (pullDistance / PULL_THRESHOLD) * 360
+  
+  // Calcula o progresso (0 a 1) para feedback visual
+  const progress = Math.min(pullDistance / PULL_THRESHOLD, 1)
+  
+  // Escala aumenta conforme se aproxima do threshold
+  const scale = 1 + (progress * 0.2)
+  
+  // Posição vertical: acompanha o visual offset para parecer "preso" ao conteúdo
+  // mas limitado para não ir muito para baixo
+  const topOffset = Math.min(visualOffset * 0.5, 40)
+  
+  // Quando pode fazer refresh (atingiu threshold) ou está recarregando, gira continuamente
+  const shouldSpin = canRefresh || isRefreshing
 
   return (
-    <AnimatePresence>
-      {(isPulling || isReloading) && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{
-            opacity: isReloading ? 0.3 : opacity,
-            y: 0
-          }}
-          exit={{ opacity: 0, transition: { duration: 0 } }}
-          style={{
-            position: 'fixed',
-            top: 'max(16px, env(safe-area-inset-top, 16px) + 8px)',
-            left: '50%',
-            marginLeft: '-12px', // Metade da largura do ícone (24px / 2)
-            zIndex: 50,
-            pointerEvents: 'none',
-            willChange: 'opacity',
-            isolation: 'isolate',
-            contain: 'layout style paint'
-          }}
-        >
-          {/* Apenas o ícone girando, sem fundo */}
-          <motion.div
-            animate={{
-              rotate: (canRefresh || isReloading) ? 360 : 0
-            }}
-            transition={{
-              rotate: (canRefresh || isReloading) ? { duration: 1.2, repeat: Infinity, ease: 'linear' } : { duration: 0.2 }
-            }}
-            className={cn(
-              "transition-colors duration-300",
-              (canRefresh || isReloading)
-                ? "text-primary"
-                : "text-muted-foreground"
-            )}
-          >
-            <RefreshCw className="h-6 w-6" />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div
+      style={{
+        position: 'fixed',
+        top: `calc(max(16px, env(safe-area-inset-top, 16px) + 8px) + ${topOffset}px)`,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 9999,
+        pointerEvents: 'none',
+        opacity: isRefreshing ? 0.8 : opacity,
+      }}
+    >
+      <div
+        className={cn(
+          "transition-colors duration-150",
+          shouldSpin && "animate-spin",
+          shouldSpin ? "text-primary" : "text-muted-foreground"
+        )}
+        style={{
+          // Rotação progressiva durante o pull, spin contínuo quando pronto ou recarregando
+          transform: shouldSpin 
+            ? `scale(${scale})` 
+            : `rotate(${progressRotation}deg) scale(${scale})`,
+        }}
+      >
+        <RefreshCw className="h-6 w-6" strokeWidth={2.5} />
+      </div>
+    </div>
   )
 }
