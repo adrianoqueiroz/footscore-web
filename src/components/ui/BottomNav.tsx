@@ -1,5 +1,5 @@
 import React from 'react'
-import { Home, Ticket, Trophy, Settings, User } from 'lucide-react'
+import { Home, ClipboardList, Trophy, Settings, User } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -15,7 +15,7 @@ interface BottomNavProps {
 
 const navItems: { key: NavigationItem; label: string; icon: typeof Home; path: string }[] = [
   { key: 'rounds', label: 'Início', icon: Home, path: '/rounds' },
-  { key: 'tickets', label: 'Palpites', icon: Ticket, path: '/tickets' },
+  { key: 'tickets', label: 'Palpites', icon: ClipboardList, path: '/tickets' },
   { key: 'ranking', label: 'Ranking', icon: Trophy, path: '/ranking' },
   { key: 'admin', label: 'Admin', icon: Settings, path: '/admin' },
 ]
@@ -70,9 +70,10 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
       {/* Mobile: Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 safe-area-inset-bottom overflow-x-hidden md:hidden">
         <div className="mx-auto flex max-w-md w-full items-center px-2 pt-3 pb-6">
+
           {/* All Navigation Items - Equally distributed */}
           <div className="flex w-full items-center justify-around">
-            {[...items, { key: 'account', label: 'Conta', icon: () => null, path: '/account' }].map((item) => {
+            {[...items, { key: 'account', label: 'Você', icon: () => null, path: '/account' }].map((item) => {
               const Icon = item.icon
               const isActive = item.key === 'account' ? isAccountPage : current === item.key
 
@@ -134,26 +135,12 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                   } : undefined}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {isActive && (
-                    <motion.div
-                      className="absolute -top-2 left-1/2 h-1 w-10 rounded-full bg-primary pointer-events-none"
-                      initial={{ scaleX: 0, opacity: 0, x: '-50%' }}
-                      animate={{ scaleX: 1, opacity: 1, x: '-50%' }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 400,
-                        damping: 30,
-                        duration: 0.4,
-                        opacity: { duration: 0.15 }
-                      }}
-                    />
-                  )}
                   {item.key === 'account' ? (
                     <div className={cn(
                       'relative flex h-6 w-6 items-center justify-center rounded-full font-semibold transition-all overflow-hidden',
                       isAccountPage
-                        ? 'border border-primary shadow-sm'
-                        : 'border border-border'
+                        ? 'border-2 border-primary shadow-sm'
+                        : 'border-2 border-muted-foreground/30'
                     )}>
                       {cachedAvatar ? (
                         <img
@@ -179,9 +166,27 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                       )}
                     </div>
                   ) : (
-                    <Icon className={cn('h-6 w-6', isActive && 'text-primary')} />
+                    <Icon className={cn('h-6 w-6 flex-shrink-0', isActive && 'text-primary')} />
                   )}
                   <span className="text-xs font-medium">{item.label}</span>
+
+                  {/* Individual indicator bar - appears above active item */}
+                  {isActive && (
+                    <motion.div
+                      className="absolute -top-2 left-1/2 h-1 w-10 rounded-full bg-primary pointer-events-none"
+                      initial={{ scaleX: 0, opacity: 0 }}
+                      animate={{ scaleX: 1, opacity: 1 }}
+                      exit={{ scaleX: 0, opacity: 0 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 400,
+                        damping: 30,
+                        duration: 0.4,
+                        opacity: { duration: 0.15 }
+                      }}
+                      style={{ x: '-50%' }}
+                    />
+                  )}
                 </motion.button>
               )
             })}
@@ -268,8 +273,8 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
             <div className={cn(
               'relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all overflow-hidden flex-shrink-0',
               isAccountPage
-                ? 'border-2 border-primary shadow-sm'
-                : 'border-2 border-border'
+                ? 'border-3 border-primary shadow-sm'
+                : 'border-3 border-muted-foreground/30'
             )}>
               {cachedAvatar ? (
                 <img
@@ -294,7 +299,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                 </span>
               )}
             </div>
-            <span className="text-sm font-medium">Conta</span>
+            <span className="text-sm font-medium">Você</span>
           </motion.button>
         </div>
       </nav>

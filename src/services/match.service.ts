@@ -55,7 +55,7 @@ export const matchService = {
   async getRoundStatus(round: number): Promise<{ allowsNewBets: boolean; isBlocked: boolean } | null> {
     try {
       const response = await apiService.get<Match[] | { matches: Match[]; round: number; allowsNewBets: boolean; isBlocked: boolean }>(`/matches?round=${round}`)
-      
+
       // Verificar se a resposta inclui informações da rodada (nova API)
       if (response && typeof response === 'object' && 'allowsNewBets' in response) {
         return {
@@ -63,7 +63,7 @@ export const matchService = {
           isBlocked: response.isBlocked
         }
       }
-      
+
       return null
     } catch (error) {
       console.error('Error fetching round status:', error)

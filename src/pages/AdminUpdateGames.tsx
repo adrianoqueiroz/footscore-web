@@ -748,7 +748,7 @@ export default function AdminUpdateGames() {
                   <div className="px-4 pt-2 pb-1 border-b border-border/30">
                     <div className="flex justify-center">
                       <div
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-primary/10 transition-all border border-dashed border-primary/30 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 group"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-primary/10 transition-all border border-dashed border-primary/30 hover:border-primary/50 bg-primary/5 group"
                         onClick={() => {
                           setEditingMatchForDateTime(updateGamesMatches[currentMatchIndex].id)
                           setTempDate(updateGamesMatches[currentMatchIndex].date || '')
@@ -771,9 +771,10 @@ export default function AdminUpdateGames() {
                   </div>
                 )}
 
+                {/* Carrossel */}
                 <div
                   ref={carouselContainerRef}
-                  className="relative overflow-hidden pt-1 pb-1"
+                  className="relative overflow-hidden pt-3 pb-1"
                   style={{ touchAction: 'pan-x' }}
                 >
                   <motion.div
@@ -822,7 +823,7 @@ export default function AdminUpdateGames() {
                       return (
                         <div
                           key={match.id}
-                          className="flex-shrink-0 p-3"
+                          className="flex-shrink-0 p-4"
                           style={{
                             width: carouselWidth > 0 ? carouselWidth : '100%',
                             minWidth: carouselWidth > 0 ? carouselWidth : '100%',
@@ -905,22 +906,13 @@ export default function AdminUpdateGames() {
                   </motion.div>
                 </div>
 
+                {/* Barra de progresso */}
                 <div className="w-full px-4 pt-2 pb-2 border-t border-border/30">
                   <div className="w-full h-1 bg-secondary rounded-full overflow-hidden mb-2">
                     <motion.div
                       className="h-full bg-primary rounded-full"
                       initial={{ width: '0%' }}
-                      animate={{
-                        width: updateGamesMatches.length > 0
-                          ? updateGamesMatches.length === 1
-                            ? '100%'
-                            : currentMatchIndex === 0
-                              ? '0%'
-                              : currentMatchIndex === updateGamesMatches.length - 1
-                                ? '100%'
-                                : `${(currentMatchIndex / (updateGamesMatches.length - 1)) * 100}%`
-                          : '0%'
-                      }}
+                      animate={{ width: `${updateGamesMatches.length > 0 ? ((currentMatchIndex + 1) / updateGamesMatches.length) * 100 : 0}%` }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                     />
                   </div>
@@ -931,31 +923,32 @@ export default function AdminUpdateGames() {
               </Card>
             )}
 
-            <div className="h-1"></div>
-
+            {/* Navegação do Carrossel */}
             {updateGamesMatches.length > 1 && (
-              <div className="flex items-center justify-between gap-4 relative z-30">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleCarouselNavigation('prev')}
-                  disabled={currentMatchIndex === 0}
-                  className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  <span className="text-sm">Anterior</span>
-                </Button>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-4 relative z-30">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => handleCarouselNavigation('prev')}
+                    disabled={currentMatchIndex === 0}
+                    className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    <span className="text-sm">Anterior</span>
+                  </Button>
 
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => handleCarouselNavigation('next')}
-                  disabled={currentMatchIndex === updateGamesMatches.length - 1}
-                  className="flex-1"
-                >
-                  <span className="text-sm">Próximo</span>
-                  <ChevronRight className="h-5 w-5 ml-1" />
-                </Button>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => handleCarouselNavigation('next')}
+                    disabled={currentMatchIndex === updateGamesMatches.length - 1}
+                    className="flex-1"
+                  >
+                    <span className="text-sm">Próximo</span>
+                    <ChevronRight className="h-5 w-5 ml-1" />
+                  </Button>
+                </div>
               </div>
             )}
 

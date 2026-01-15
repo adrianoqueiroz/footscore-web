@@ -23,6 +23,7 @@ export default function Matches() {
   const [matchesLoading, setMatchesLoading] = useState(true)
   const [allowsNewBets, setAllowsNewBets] = useState(true)
   const [isBlocked, setIsBlocked] = useState(false)
+  const [storedAllowsNewBets, setStoredAllowsNewBets] = useState<boolean | undefined>(undefined)
   const { rounds, selectedRound, setSelectedRound, loading: roundsLoading, refreshRounds, validateSelection } = useRoundSelector()
   const [showPulsingBall, setShowPulsingBall] = useState(false)
   const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
@@ -131,15 +132,23 @@ export default function Matches() {
   const loadRoundStatus = useCallback(async () => {
     if (!selectedRound) return
     try {
-      const status = await matchService.getRoundStatus(selectedRound)
-      if (status) {
-        setAllowsNewBets(status.allowsNewBets)
-        setIsBlocked(status.isBlocked)
-      }
+      const { storedAllowsNewBets: storedAllows } = await matchService.getMatchesByRoundWithStatus(selectedRound)
+      // Usar apenas o valor armazenado no banco
+      const allows = storedAllows ?? true
+      setStoredAllowsNewBets(storedAllows)
+      setAllowsNewBets(allows)
+      setIsBlocked(false)
     } catch (error) {
       console.error('Error loading round status:', error)
     }
   }, [selectedRound])
+
+  // Recarregar status quando a rodada muda
+  useEffect(() => {
+    if (selectedRound) {
+      loadRoundStatus()
+    }
+  }, [selectedRound, loadRoundStatus])
 
   // Atualizar status da rodada periodicamente para detectar bloqueios em tempo real
   useEffect(() => {
@@ -239,7 +248,8 @@ export default function Matches() {
     // Verificar status da rodada antes de navegar
     try {
       const status = await matchService.getRoundStatus(selectedRound)
-      if (status && (!status.allowsNewBets || status.isBlocked)) {
+      const allows = status.storedAllowsNewBets ?? true
+      if (status && !allows) {
         // Atualizar estado local
         setAllowsNewBets(false)
         setIsBlocked(true)
@@ -507,7 +517,7 @@ export default function Matches() {
             transition={{ delay: 0.05 }} // Delay reduzido para resposta mais rápida
             className="mt-6"
           >
-            {allowsNewBets && !isBlocked ? (
+            {allowsNewBets ? (
               <Button
                 onClick={handleNewPrediction}
                 size="lg"

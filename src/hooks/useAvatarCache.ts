@@ -46,6 +46,7 @@ export function useAvatarCache(originalUrl: string | null | undefined): AvatarCa
     try {
       const response = await fetch(url, {
         method: 'GET',
+        mode: 'cors', // Tentar CORS primeiro
         headers: {
           'Cache-Control': 'no-cache',
         },
@@ -66,6 +67,7 @@ export function useAvatarCache(originalUrl: string | null | undefined): AvatarCa
         reader.readAsDataURL(blob)
       })
     } catch (error) {
+      // Se falhar por CORS ou outros motivos, não tentar novamente
       throw new Error(`Failed to convert image to base64: ${error}`)
     }
   }, [])
@@ -121,10 +123,12 @@ export function useAvatarCache(originalUrl: string | null | undefined): AvatarCa
         setError(null)
       })
       .catch((error) => {
-        console.warn('Failed to cache avatar:', error)
-        // Fallback: usar a URL original se o cache falhar
+        // Para erros de CORS ou rede, usar a URL original diretamente
+        // Não definir como erro para não mostrar mensagens de erro desnecessárias
+        console.warn('Failed to cache avatar (using original URL):', error)
         setAvatarUrl(originalUrl)
-        setError(error instanceof Error ? error.message : 'Failed to load avatar')
+        setError(null)
+        setIsLoading(false)
       })
   }, [originalUrl, cacheAvatar])
 

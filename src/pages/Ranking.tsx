@@ -471,37 +471,39 @@ export default function Ranking() {
         )}
 
 
-            {/* Status da rodada - quadro único sempre visível */}
-            <div className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border ${
-              isRoundFinished
-                ? 'bg-green-500/20 border-green-500/50'
-                : hasLiveMatches
-                  ? 'bg-yellow-500/20 border-yellow-500/50'
-                  : 'bg-blue-500/20 border-blue-500/50'
-            }`}>
-              {isRoundFinished ? (
-                <>
-                  <Info className="h-4 w-4 text-green-500" />
-                  <p className="text-sm text-green-500 font-medium">
-                    Rodada finalizada - Resultado final
-                  </p>
-                </>
-              ) : hasLiveMatches ? (
-                <>
-                  <Radio className="h-4 w-4 text-yellow-500 animate-pulse" />
-                  <p className="text-sm text-yellow-500 font-medium">
-                    Jogos em andamento - Resultado parcial
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Info className="h-4 w-4 text-blue-500" />
-                  <p className="text-sm text-blue-500 font-medium">
-                    Jogos agendados - Resultado parcial
-                  </p>
-                </>
-              )}
-            </div>
+            {/* Status da rodada - só mostrar quando há ranking disponível */}
+            {!allMatchesScheduled && ranking.length > 0 && (
+              <div className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border ${
+                isRoundFinished
+                  ? 'bg-green-500/20 border-green-500/50'
+                  : hasLiveMatches
+                    ? 'bg-yellow-500/20 border-yellow-500/50'
+                    : 'bg-blue-500/20 border-blue-500/50'
+              }`}>
+                {isRoundFinished ? (
+                  <>
+                    <Info className="h-4 w-4 text-green-500" />
+                    <p className="text-sm text-green-500 font-medium">
+                      Rodada finalizada - Resultado final
+                    </p>
+                  </>
+                ) : hasLiveMatches ? (
+                  <>
+                    <Radio className="h-4 w-4 text-yellow-500 animate-pulse" />
+                    <p className="text-sm text-yellow-500 font-medium">
+                      Jogos em andamento - Resultado parcial
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <p className="text-sm text-blue-500 font-medium">
+                      Jogos agendados - Resultado parcial
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             {allMatchesScheduled ? (
               <Card>
@@ -515,19 +517,11 @@ export default function Ranking() {
                   </p>
                 </div>
               </Card>
-            ) : showRankingLoading ? (
+            ) : showRankingLoading || filteredRanking.length === 0 ? (
               <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-4 md:space-y-0">
                 {[1, 2, 3, 4, 5].map(i => (
                   <Skeleton key={i} className="h-32" />
                 ))}
-              </div>
-            ) : filteredRanking.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  {view === 'my'
-                    ? 'Você ainda não tem resultados nesta rodada'
-                    : 'Nenhum resultado encontrado para esta rodada'}
-                </p>
               </div>
             ) : (
           <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-4 md:space-y-0">
