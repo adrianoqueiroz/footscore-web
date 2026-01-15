@@ -174,8 +174,8 @@ export default function NotificationBell() {
               {/* Lista de notificações */}
               <div className="overflow-y-auto flex-1">
                 {sortedNotifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground text-sm min-h-[200px]">
-                    <Bell className="h-8 w-8 mb-2 opacity-50" />
+                  <div className="flex flex-col items-center justify-center p-4 text-center text-muted-foreground text-sm">
+                    <Bell className="h-6 w-6 mb-2 opacity-50" />
                     <p>Nenhuma notificação</p>
                   </div>
                 ) : (
@@ -185,11 +185,20 @@ export default function NotificationBell() {
                         key={notification.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className={`${isMobile ? 'p-3' : 'p-4'} hover:bg-secondary/50 transition-colors ${
+                        className={`relative ${isMobile ? 'p-3' : 'p-4'} hover:bg-secondary/50 transition-colors ${
                           !notification.read ? 'bg-primary/5' : ''
                         }`}
                       >
-                        <div className="flex items-start gap-3">
+                        {/* Botão X no canto superior direito */}
+                        <button
+                          onClick={() => removeNotification(notification.id)}
+                          className="absolute top-2 right-2 p-1.5 hover:bg-secondary/80 rounded-md transition-colors opacity-70 hover:opacity-100"
+                          aria-label="Remover notificação"
+                        >
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+
+                        <div className="flex items-start gap-3 pr-6">
                           {/* Ícone */}
                           <div className={`${isMobile ? 'text-2xl' : 'text-xl'} flex-shrink-0 mt-0.5`}>
                             {getNotificationIcon(notification)}
@@ -197,28 +206,17 @@ export default function NotificationBell() {
 
                           {/* Conteúdo */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <p className={`font-medium ${isMobile ? 'text-base' : 'text-sm'} text-foreground break-words`}>
-                                  {notification.title}
-                                </p>
-                                <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-muted-foreground mt-1 break-words`}>
-                                  {notification.body}
-                                </p>
-                                {notification.data && notification.data.homeTeam && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {notification.data.homeTeam} {notification.data.homeScore ?? 0} x {notification.data.awayScore ?? 0} {notification.data.awayTeam}
-                                  </p>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => removeNotification(notification.id)}
-                                className="flex-shrink-0 p-1 hover:bg-secondary rounded transition-colors"
-                                aria-label="Remover notificação"
-                              >
-                                <X className="h-3 w-3 text-muted-foreground" />
-                              </button>
-                            </div>
+                            <p className={`font-medium ${isMobile ? 'text-base' : 'text-sm'} text-foreground break-words`}>
+                              {notification.title}
+                            </p>
+                            <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-muted-foreground mt-1 break-words`}>
+                              {notification.body}
+                            </p>
+                            {notification.data && notification.data.homeTeam && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {notification.data.homeTeam} {notification.data.homeScore ?? 0} x {notification.data.awayScore ?? 0} {notification.data.awayTeam}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground mt-2">
                               {formatTime(notification.timestamp)}
                             </p>

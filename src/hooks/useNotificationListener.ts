@@ -79,42 +79,8 @@ export function useNotificationListener() {
         }
       })
     } else if (event.type === 'round_finished') {
-      // Adicionar notificação de rodada finalizada
-      addNotification({
-        title: '🏆 Rodada Finalizada!',
-        body: `A rodada ${event.data.round} foi finalizada`,
-        type: 'round_finished',
-        data: {
-          round: event.data.round
-        }
-      })
-    } else if (event.type === 'match_status_update') {
-      // Adicionar notificação de mudança de status do jogo
-      const status = event.data.status
-      let title = '📊 Atualização de Jogo'
-      let body = `${event.data.homeTeam} x ${event.data.awayTeam}`
-
-      if (status === 'live') {
-        title = '🔴 Jogo ao Vivo!'
-        body = `${event.data.homeTeam} ${event.data.homeScore ?? 0} x ${event.data.awayScore ?? 0} ${event.data.awayTeam}`
-      } else if (status === 'finished') {
-        title = '✅ Jogo Finalizado'
-        body = `${event.data.homeTeam} ${event.data.homeScore ?? 0} x ${event.data.awayScore ?? 0} ${event.data.awayTeam}`
-      }
-
-      addNotification({
-        title,
-        body,
-        type: 'match_status',
-        data: {
-          matchId: event.data.matchId,
-          round: event.data.round,
-          homeTeam: event.data.homeTeam,
-          awayTeam: event.data.awayTeam,
-          homeScore: event.data.homeScore,
-          awayScore: event.data.awayScore
-        }
-      })
+      // Notificação de rodada finalizada será tratada no backend com push notification
+      // Não adicionar aqui no sininho, apenas escutar para atualizar UI se necessário
     }
   })
 

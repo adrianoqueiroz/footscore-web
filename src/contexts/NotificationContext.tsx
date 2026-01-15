@@ -121,6 +121,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             notificationType = 'ranking_top_n'
             defaultTitle = `🎯 Você está no Top ${event.data.data.topN || 3}!`
             defaultBody = `Seu ticket está em ${event.data.data.position}º lugar na rodada ${event.data.data.round}!`
+          } else if (event.data.data?.type === 'round_finished') {
+            notificationType = 'round_finished'
+            // Usar título e corpo do payload (já vem diferenciado para vencedor vs outros)
+            defaultTitle = event.data.title || '🏆 Rodada Finalizada!'
+            defaultBody = event.data.body || `A rodada ${event.data.data.round} foi finalizada`
           }
           
           const newNotification: NotificationItem = {
