@@ -16,6 +16,7 @@ import { parseMatchDateTime, cn } from '@/lib/utils'
 import { getTeamDisplayName } from '@/lib/teamNames'
 import { useMatchEvents } from '@/hooks/useMatchEvents'
 import PulsingBall from '@/components/ui/PulsingBall'
+import { authService } from '@/services/auth.service'
 
 export default function Matches() {
   const navigate = useNavigate()
@@ -28,9 +29,28 @@ export default function Matches() {
   const [showPulsingBall, setShowPulsingBall] = useState(false)
   const [lastScoreUpdate, setLastScoreUpdate] = useState<{ homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; goalScorer?: 'home' | 'away' | null; isGoalCancelled?: boolean; homeTeamLogo?: string | null; awayTeamLogo?: string | null } | null>(null)
   const [showBlockedMessage, setShowBlockedMessage] = useState(false)
+  const [notificationPreferences, setNotificationPreferences] = useState<{
+    bellGoalsAllTeams: boolean
+    bellGoalsFavoriteTeam: boolean
+  } | null>(null)
 
   // AbortController para cancelar operações quando a página muda
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Carregar preferências de notificação
+  useEffect(() => {
+    authService.getNotificationPreferences().then(prefs => {
+      setNotificationPreferences({
+        bellGoalsAllTeams: prefs.bellGoalsAllTeams ?? true,
+        bellGoalsFavoriteTeam: prefs.bellGoalsFavoriteTeam ?? true
+      })
+    }).catch(() => {
+      setNotificationPreferences({
+        bellGoalsAllTeams: true,
+        bellGoalsFavoriteTeam: true
+      })
+    })
+  }, [])
 
   // Conectar ao SSE para receber atualizações de placar e status
   useMatchEvents((event) => {
@@ -59,7 +79,28 @@ export default function Matches() {
             })
           )
 
-          if (event.data.scoreChanged) {
+          if (event.data.scoreChanged && !event.data.isGoalCancelled) {
+            // Verificar se deve mostrar a bolinha pulsando baseado nas preferências
+            if (!notificationPreferences) return // Aguardar preferências carregarem
+            
+            const user = authService.getCurrentUser()
+            const favoriteTeam = user?.favoriteTeam || null
+            const { homeTeam, awayTeam } = event.data
+            // Normalizar nomes para comparação (remover espaços extras)
+            const normalizedFavoriteTeam = favoriteTeam?.trim() || null
+            const normalizedHomeTeam = homeTeam?.trim() || ''
+            const normalizedAwayTeam = awayTeam?.trim() || ''
+            const isFavoriteTeamPlaying = normalizedFavoriteTeam && (normalizedHomeTeam === normalizedFavoriteTeam || normalizedAwayTeam === normalizedFavoriteTeam)
+            
+            // Verificar se deve notificar
+            const shouldNotifyAll = notificationPreferences.bellGoalsAllTeams
+            const shouldNotifyFavorite = notificationPreferences.bellGoalsFavoriteTeam && isFavoriteTeamPlaying
+            
+            if (!shouldNotifyAll && !shouldNotifyFavorite) {
+              // Não deve mostrar a bolinha
+              return
+            }
+            
             const matchInfo = {
               homeTeam: event.data.homeTeam,
               awayTeam: event.data.awayTeam,

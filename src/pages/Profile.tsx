@@ -9,11 +9,22 @@ import { authService } from '@/services/auth.service'
 import { useToastContext } from '@/contexts/ToastContext'
 import { useAvatarCache } from '@/hooks/useAvatarCache'
 import ContentWrapper from '@/components/ui/ContentWrapper'
+import { getTeamDisplayName } from '@/lib/teamNames'
+
+// Lista de times (Série A)
+const TEAMS = [
+  'Flamengo', 'Palmeiras', 'Corinthians', 'Sao Paulo', 'Fluminense',
+  'Vasco', 'Atletico-MG', 'Cruzeiro', 'Internacional', 'Gremio',
+  'Santos', 'Botafogo', 'Athletico-PR', 'Bahia', 'Fortaleza',
+  'Ceara', 'Sport', 'Goias', 'Coritiba', 'America-MG',
+  'Bragantino', 'Cuiaba', 'Juventude', 'Vitoria'
+].sort()
 
 export default function Profile() {
   const navigate = useNavigate()
   const toast = useToastContext()
-  const user = authService.getCurrentUser()
+  const [user, setUser] = useState(authService.getCurrentUser())
+  const [isSaving, setIsSaving] = useState(false)
 
   // Usar cache de avatar
   const { avatarUrl: cachedAvatar, isLoading: avatarLoading } = useAvatarCache(user?.avatar)
@@ -22,17 +33,28 @@ export default function Profile() {
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [nickname, setNickname] = useState('')
+  const [favoriteTeam, setFavoriteTeam] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
-    if (user) {
+    if (user && !isEditing && !isSaving) {
+      // Só atualizar quando não estiver editando e não estiver salvando para não sobrescrever mudanças do usuário
       setName(user.name || '')
       setPhone(user.phone || '')
       setCity(user.city || '')
       setNickname(user.nickname || '')
+      const teamValue = user.favoriteTeam || ''
+      console.log('[Profile] useEffect - carregando favoriteTeam do user:', teamValue, 'isEditing:', isEditing, 'isSaving:', isSaving)
+      setFavoriteTeam(teamValue)
     }
-  }, [user])
+  }, [user, isEditing, isSaving])
+  
+  // Debug: monitorar mudanças no favoriteTeam
+  useEffect(() => {
+    console.log('[Profile] favoriteTeam state mudou para:', favoriteTeam, 'tipo:', typeof favoriteTeam)
+  }, [favoriteTeam])
+  
 
   const formatPhone = (value: string) => {
     return value
@@ -63,27 +85,45 @@ export default function Profile() {
     }
 
     setLoading(true)
+    setIsSaving(true) // Marcar que está salvando para evitar que useEffect resete
     try {
-      const updatedUser = await authService.updateProfile({
+      console.log('[Profile] Salvando perfil - favoriteTeam antes de enviar:', favoriteTeam, 'tipo:', typeof favoriteTeam)
+      const profileData = {
         name: name.trim(),
         phone: phoneNumbers || undefined,
         city: city.trim(),
         nickname: nickname.trim() || undefined,
-      })
+        favoriteTeam: favoriteTeam && favoriteTeam.trim() !== '' ? favoriteTeam.trim() : null, // Enviar null se vazio
+      }
+      console.log('[Profile] Dados sendo enviados:', profileData)
+      const updatedUser = await authService.updateProfile(profileData)
+      console.log('[Profile] Usuário atualizado recebido:', updatedUser)
+      console.log('[Profile] favoriteTeam retornado:', updatedUser?.favoriteTeam, 'tipo:', typeof updatedUser?.favoriteTeam)
       // Atualizar estado local com o usuário atualizado
       if (updatedUser) {
+        // Atualizar os campos individuais primeiro
         setName(updatedUser.name)
         setPhone(updatedUser.phone || '')
         setCity(updatedUser.city)
         setNickname(updatedUser.nickname || '')
+        const teamValue = updatedUser.favoriteTeam || ''
+        console.log('[Profile] Setando favoriteTeam no estado:', teamValue)
+        setFavoriteTeam(teamValue) // Manter como string vazia, não null
+        // Atualizar o estado do usuário por último
+        setUser(updatedUser)
       }
       toast.success('Perfil atualizado com sucesso!')
+      // Desativar edição
       setIsEditing(false)
     } catch (error: any) {
       const errorMessage = error?.message || 'Erro ao atualizar perfil. Tente novamente.'
       toast.error(errorMessage)
     } finally {
       setLoading(false)
+      // Aguardar um pouco antes de desmarcar isSaving para garantir que useEffect não resete
+      setTimeout(() => {
+        setIsSaving(false)
+      }, 100)
     }
   }
 
@@ -242,6 +282,38 @@ export default function Profile() {
                 )}
               </div>
             </div>
+
+            {/* Time do Coração */}
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-lg">⚽</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                {isEditing ? (
+                  <select
+                    value={favoriteTeam || ''}
+                    onChange={(e) => {
+                      const newValue = e.target.value
+                      console.log('[Profile] Select onChange - novo valor:', newValue)
+                      setFavoriteTeam(newValue)
+                    }}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Selecione um time (opcional)</option>
+                    {TEAMS.map(team => (
+                      <option key={team} value={team}>
+                        {getTeamDisplayName(team)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Time do Coração</p>
+                    <p className="text-base font-semibold">{favoriteTeam && favoriteTeam !== '' ? getTeamDisplayName(favoriteTeam) : 'Não informado'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -270,6 +342,7 @@ export default function Profile() {
                     setPhone(user.phone || '')
                     setCity(user.city || '')
                     setNickname(user.nickname || '')
+                    setFavoriteTeam(user.favoriteTeam || '')
                   }
                 }}
                 disabled={loading}

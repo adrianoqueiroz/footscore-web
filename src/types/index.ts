@@ -14,6 +14,7 @@ export interface User {
   phone: string
   city: string
   nickname?: string
+  favoriteTeam?: string | null
   isAdmin: boolean
   superAdmin?: boolean
 }

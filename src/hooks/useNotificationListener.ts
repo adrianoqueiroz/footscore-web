@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useMatchEvents } from './useMatchEvents'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { notificationService } from '@/services/notification.service'
+import { authService } from '@/services/auth.service'
 
 /**
  * Hook que escuta eventos SSE e adiciona notificações ao sininho
@@ -15,12 +16,59 @@ import { notificationService } from '@/services/notification.service'
  */
 export function useNotificationListener() {
   const { addNotification } = useNotifications()
+  const [preferences, setPreferences] = useState<{
+    bellGoalsAllTeams: boolean
+    bellGoalsFavoriteTeam: boolean
+  } | null>(null)
+  const user = authService.getCurrentUser()
+  const favoriteTeam = user?.favoriteTeam || null
+
+  // Carregar preferências
+  useEffect(() => {
+    authService.getNotificationPreferences().then(prefs => {
+      setPreferences({
+        bellGoalsAllTeams: prefs.bellGoalsAllTeams ?? true,
+        bellGoalsFavoriteTeam: prefs.bellGoalsFavoriteTeam ?? true
+      })
+    }).catch(() => {
+      setPreferences({
+        bellGoalsAllTeams: true,
+        bellGoalsFavoriteTeam: true
+      })
+    })
+  }, [])
 
   // Escutar eventos de atualizações
   useMatchEvents((event) => {
-    // Notificações de gol foram removidas do sininho conforme solicitação
-
-    if (event.type === 'round_bets_status') {
+    if (event.type === 'score_update' && event.data.scoreChanged && !event.data.isGoalCancelled) {
+      // Verificar se deve mostrar no sininho
+      if (!preferences) return // Aguardar preferências carregarem
+      
+      const { homeTeam, awayTeam, goalScorer } = event.data
+      const isFavoriteTeamPlaying = favoriteTeam && (homeTeam === favoriteTeam || awayTeam === favoriteTeam)
+      
+      // Verificar se deve notificar
+      const shouldNotifyAll = preferences.bellGoalsAllTeams
+      const shouldNotifyFavorite = preferences.bellGoalsFavoriteTeam && isFavoriteTeamPlaying
+      
+      if (shouldNotifyAll || shouldNotifyFavorite) {
+        const teamName = goalScorer === 'home' ? homeTeam : awayTeam
+        addNotification({
+          title: '⚽ Gol!',
+          body: `${teamName} marcou! ${homeTeam} ${event.data.homeScore} x ${event.data.awayScore} ${awayTeam}`,
+          type: 'goal',
+          data: {
+            matchId: event.data.matchId,
+            round: event.data.round,
+            homeTeam,
+            awayTeam,
+            homeScore: event.data.homeScore,
+            awayScore: event.data.awayScore,
+            goalScorer
+          }
+        })
+      }
+    } else if (event.type === 'round_bets_status') {
       // Notificação quando rodada começa ou para de aceitar palpites
       const { round, allowsNewBets, isBlocked } = event.data
       

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Bell, Save, BellOff, BellRing } from 'lucide-react'
+import { ArrowLeft, Bell, BellOff, BellRing } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -27,11 +27,18 @@ export default function NotificationSettings() {
   } = usePushNotifications()
 
   const [notifyGoalsAllTeams, setNotifyGoalsAllTeams] = useState(true)
-  const [favoriteTeam, setFavoriteTeam] = useState<string | null>(null)
+  const [notifyGoalsFavoriteTeam, setNotifyGoalsFavoriteTeam] = useState(true)
   const [notifyRoundBets, setNotifyRoundBets] = useState(true)
   const [notifyRanking, setNotifyRanking] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [notifyBell, setNotifyBell] = useState(true)
+  const [notifyToast, setNotifyToast] = useState(true)
+  const [bellRanking, setBellRanking] = useState(true)
+  const [bellFavoriteTeamMatch, setBellFavoriteTeamMatch] = useState(true)
+  const [bellGoalsAllTeams, setBellGoalsAllTeams] = useState(true)
+  const [bellGoalsFavoriteTeam, setBellGoalsFavoriteTeam] = useState(true)
   const [testingSupport, setTestingSupport] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [favoriteTeam, setFavoriteTeam] = useState<string>('')
 
   // Detectar ambiente iOS PWA
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -45,28 +52,120 @@ export default function NotificationSettings() {
   // Suporte efetivo - iOS PWA pode ter suporte mesmo se não detectado inicialmente
   const effectivePushSupported = pushSupported || isIOSPWA
 
-  // Lista de times (Série A)
-  const TEAMS = [
-    'Flamengo', 'Palmeiras', 'Corinthians', 'Sao Paulo', 'Fluminense',
-    'Vasco', 'Atletico-MG', 'Cruzeiro', 'Internacional', 'Gremio',
-    'Santos', 'Botafogo', 'Athletico-PR', 'Bahia', 'Fortaleza',
-    'Ceara', 'Sport', 'Goias', 'Coritiba', 'America-MG',
-    'Bragantino', 'Cuiaba', 'Juventude', 'Vitoria'
-  ].sort()
 
   useEffect(() => {
+    // Carregar preferências de notificação e perfil do usuário
+    setIsLoading(true)
+    
+    // Carregar perfil do usuário para obter favoriteTeam atualizado (da tabela users, não de notificações)
+    const loadFavoriteTeam = async () => {
+      try {
+        const user = await authService.refreshUser()
+        setFavoriteTeam(user?.favoriteTeam || '')
+      } catch (error) {
+        console.error('Erro ao carregar perfil do usuário:', error)
+        // Fallback para localStorage
+        const currentUser = authService.getCurrentUser()
+        setFavoriteTeam(currentUser?.favoriteTeam || '')
+      }
+    }
+    loadFavoriteTeam()
+    
     // Carregar preferências de notificação
     authService.getNotificationPreferences()
       .then(prefs => {
         setNotifyGoalsAllTeams(prefs.notifyGoalsAllTeams)
-        setFavoriteTeam(prefs.favoriteTeam)
+        setNotifyGoalsFavoriteTeam(prefs.notifyGoalsFavoriteTeam ?? true)
         setNotifyRoundBets(prefs.notifyRoundBets)
         setNotifyRanking(prefs.notifyRanking)
+        setNotifyBell(prefs.notifyBell ?? true)
+        setNotifyToast(prefs.notifyToast ?? true)
+        setBellRanking(prefs.bellRanking ?? true)
+        setBellFavoriteTeamMatch(prefs.bellFavoriteTeamMatch ?? true)
+        setBellGoalsAllTeams(prefs.bellGoalsAllTeams ?? true)
+        setBellGoalsFavoriteTeam(prefs.bellGoalsFavoriteTeam ?? true)
       })
       .catch(error => {
         console.error('Erro ao carregar preferências de notificação:', error)
       })
+      .finally(() => {
+        setIsLoading(false)
+      })
   }, [])
+
+  // Recarregar favoriteTeam quando a página ficar visível (caso tenha sido atualizado em outra aba)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        authService.refreshUser()
+          .then(user => {
+            setFavoriteTeam(user?.favoriteTeam || '')
+          })
+          .catch(() => {
+            const currentUser = authService.getCurrentUser()
+            setFavoriteTeam(currentUser?.favoriteTeam || '')
+          })
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
+  // Função para salvar preferências imediatamente sem mostrar loading
+  const savePreference = async (updates: {
+    notifyGoalsAllTeams?: boolean
+    notifyGoalsFavoriteTeam?: boolean
+    notifyRoundBets?: boolean
+    notifyRanking?: boolean
+    notifyBell?: boolean
+    notifyToast?: boolean
+    bellRanking?: boolean
+    bellFavoriteTeamMatch?: boolean
+    bellGoalsAllTeams?: boolean
+    bellGoalsFavoriteTeam?: boolean
+  }) => {
+    try {
+      // Preparar valores atualizados - enviar todos os campos
+      const currentValues: any = {
+        notifyGoals: true, // Sempre true já que não há mais toggle principal
+        notifyGoalsAllTeams: updates.notifyGoalsAllTeams ?? notifyGoalsAllTeams,
+        notifyGoalsFavoriteTeam: updates.notifyGoalsFavoriteTeam ?? notifyGoalsFavoriteTeam,
+        notifyRoundBets: updates.notifyRoundBets ?? notifyRoundBets,
+        notifyRanking: updates.notifyRanking ?? notifyRanking,
+        notifyBell: updates.notifyBell ?? notifyBell,
+        notifyToast: updates.notifyToast ?? notifyToast,
+        bellRanking: updates.bellRanking ?? bellRanking,
+        bellFavoriteTeamMatch: updates.bellFavoriteTeamMatch ?? bellFavoriteTeamMatch,
+        bellGoalsAllTeams: updates.bellGoalsAllTeams ?? bellGoalsAllTeams,
+        bellGoalsFavoriteTeam: updates.bellGoalsFavoriteTeam ?? bellGoalsFavoriteTeam
+      }
+      
+      await authService.updateNotificationPreferences(currentValues)
+    } catch (error: any) {
+      console.error('Erro ao salvar preferência:', error)
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao salvar preferência. Tente novamente.'
+      toast.error(errorMessage)
+      // Reverter mudança em caso de erro - recarregar preferências
+      try {
+        const prefs = await authService.getNotificationPreferences()
+        setNotifyGoalsAllTeams(prefs.notifyGoalsAllTeams)
+        setNotifyGoalsFavoriteTeam(prefs.notifyGoalsFavoriteTeam ?? true)
+        setNotifyRoundBets(prefs.notifyRoundBets)
+        setNotifyRanking(prefs.notifyRanking)
+        setNotifyBell(prefs.notifyBell ?? true)
+        setNotifyToast(prefs.notifyToast ?? true)
+        setBellRanking(prefs.bellRanking ?? true)
+        setBellFavoriteTeamMatch(prefs.bellFavoriteTeamMatch ?? true)
+        setBellGoalsAllTeams(prefs.bellGoalsAllTeams ?? true)
+        setBellGoalsFavoriteTeam(prefs.bellGoalsFavoriteTeam ?? true)
+      } catch (reloadError) {
+        console.error('Erro ao recarregar preferências:', reloadError)
+      }
+    }
+  }
 
   const handleTestSupport = async () => {
     setTestingSupport(true)
@@ -220,24 +319,6 @@ export default function NotificationSettings() {
     }
   }
 
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      await authService.updateNotificationPreferences({
-        notifyGoals: true, // Sempre true já que não há mais toggle principal
-        notifyGoalsAllTeams,
-        favoriteTeam, // Manter o favoriteTeam mesmo quando "Todos" está ligado (preferência do usuário)
-        notifyRoundBets,
-        notifyRanking
-      })
-      toast.success('Preferências de notificação atualizadas com sucesso!')
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Erro ao atualizar preferências. Tente novamente.'
-      toast.error(errorMessage)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   return (
     <ContentWrapper className="pt-6 md:pt-0">
@@ -254,217 +335,208 @@ export default function NotificationSettings() {
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">Notificações</h1>
-            <p className="text-sm text-muted-foreground">Configure quando deseja receber notificações</p>
           </div>
         </div>
 
-        {/* Controle Principal de Notificações Push */}
+        {/* Ativar Notificações Push */}
         <Card className="p-4">
-          {/* Título */}
-          <div className="flex items-center gap-2 mb-3">
-            {isPushSubscribed ? (
-              <BellRing className="h-5 w-5 text-green-500" />
-            ) : (
-              <BellOff className="h-5 w-5 text-muted-foreground" />
-            )}
-            <h2 className="text-lg font-semibold">Notificações Push</h2>
-          </div>
-
-          {/* Conteúdo */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">
-                  {isPushSubscribed
-                    ? 'Notificações push estão ativadas. Você receberá notificações no seu dispositivo.'
-                    : effectivePushSupported
-                      ? 'Ative as notificações push para receber alertas no seu dispositivo.'
-                      : ''
-                  }
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isPushSubscribed ? (
+                <BellRing className="h-5 w-5 text-green-500" />
+              ) : (
+                <BellOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <div>
+                <h2 className="text-base font-semibold">Notificações Push</h2>
+                <p className="text-xs text-muted-foreground">
+                  {isPushSubscribed ? 'Ativado' : effectivePushSupported ? 'Desativado' : 'Não suportado'}
                 </p>
               </div>
-              {effectivePushSupported ? (
-                <Button
-                  variant={isPushSubscribed ? "outline" : "primary"}
-                  size="sm"
-                  onClick={handleTogglePushNotifications}
-                  disabled={pushLoading}
-                  className="min-w-[100px]"
-                >
-                  {pushLoading ? (
-                    <>
-                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Aguarde...
-                    </>
-                  ) : isPushSubscribed ? (
-                    <>
-                      <BellOff className="h-4 w-4 mr-2" />
-                      Desativar
-                    </>
-                  ) : (
-                    <>
-                      <BellRing className="h-4 w-4 mr-2" />
-                      Ativar
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="flex flex-col gap-3 w-full">
-                  {/* Texto e botão lado a lado */}
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-muted-foreground flex-1">
-                      Funcionalidade limitada neste navegador.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleTestSupport}
-                      disabled={testingSupport}
-                      className="text-xs"
-                    >
-                      {testingSupport ? (
-                        <>
-                          <div className="h-3 w-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
-                          Testando...
-                        </>
-                      ) : (
-                        'Testar Suporte'
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Dicas PWA para dispositivos móveis */}
-                  {isMobile && (
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-                      <p className="text-sm font-medium mb-2 text-blue-800 dark:text-blue-200">💡 Instale como App</p>
-                      <div className="space-y-2 text-sm">
-                        <p className="text-blue-700 dark:text-blue-300">
-                          <strong>iOS:</strong> Toque em compartilhar → "Adicionar à Tela Inicial"
-                        </p>
-                        <p className="text-blue-700 dark:text-blue-300">
-                          <strong>Android:</strong> Toque no menu (⋮) → "Adicionar à tela inicial"
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                          Após instalar, você receberá notificações push completas!
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
+            {effectivePushSupported ? (
+              <Button
+                variant={isPushSubscribed ? "outline" : "primary"}
+                size="sm"
+                onClick={handleTogglePushNotifications}
+                disabled={pushLoading}
+                className="min-w-[100px]"
+              >
+                {pushLoading ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Aguarde...
+                  </>
+                ) : isPushSubscribed ? (
+                  <>
+                    <BellOff className="h-4 w-4 mr-2" />
+                    Desativar
+                  </>
+                ) : (
+                  <>
+                    <BellRing className="h-4 w-4 mr-2" />
+                    Ativar
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestSupport}
+                disabled={testingSupport}
+                className="text-xs"
+              >
+                {testingSupport ? (
+                  <>
+                    <div className="h-3 w-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
+                    Testando...
+                  </>
+                ) : (
+                  'Testar Suporte'
+                )}
+              </Button>
+            )}
           </div>
+          {isMobile && !effectivePushSupported && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              💡 Instale como app para receber notificações push
+            </div>
+          )}
         </Card>
 
-        {/* Configurações de Notificação */}
+        {/* Quando o App está Fechado (Push) */}
         <Card className="p-4 space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Preferências</h2>
+          <div className="flex items-center gap-2">
+            <BellRing className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Quando o App está Fechado</h2>
           </div>
 
-
-          <div className="space-y-4">
-            {/* 1. Início/Encerramento de Palpites */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="font-medium text-sm">Início/Encerramento de Palpites</p>
-                <p className="text-xs text-muted-foreground">Receber notificações quando rodadas começarem ou pararem de aceitar palpites</p>
-              </div>
+              <p className="text-sm font-medium">Início/Encerramento de Palpites</p>
               <Switch
                 checked={notifyRoundBets}
-                onCheckedChange={setNotifyRoundBets}
+                onCheckedChange={async (checked) => {
+                  setNotifyRoundBets(checked)
+                  await savePreference({ notifyRoundBets: checked })
+                }}
+                disabled={isLoading}
               />
             </div>
 
-            {/* 2. Notificações de Ranking */}
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="font-medium text-sm">Notificações de Ranking</p>
-                <p className="text-xs text-muted-foreground">Receber notificações quando seus tickets entrarem no ranking</p>
-              </div>
+              <p className="text-sm font-medium">Ranking</p>
               <Switch
                 checked={notifyRanking}
-                onCheckedChange={setNotifyRanking}
+                onCheckedChange={async (checked) => {
+                  setNotifyRanking(checked)
+                  await savePreference({ notifyRanking: checked })
+                }}
+                disabled={isLoading}
               />
             </div>
 
-            {/* Divisor */}
-            <div className="border-t border-border pt-4"></div>
-
-            {/* 3. Notificações de Gol - Título sem toggle */}
             <div>
-              <p className="font-medium text-sm mb-1">Notificações de Gol</p>
-              <p className="text-xs text-muted-foreground mb-4">Receber notificações quando houver gols</p>
-
+              <p className="text-sm font-medium mb-3">Notificações de Gol</p>
               <div className="space-y-3 pl-2">
-                {/* Todos */}
                 <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">Todos</p>
-                    <p className="text-xs text-muted-foreground">Receber notificações de gols de todos os times</p>
-                  </div>
+                  <p className="text-sm font-medium">Todos os Times</p>
                   <Switch
                     checked={notifyGoalsAllTeams}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={async (checked) => {
                       setNotifyGoalsAllTeams(checked)
-                      // Quando ativa "Todos", automaticamente desativa a opção do time do coração
+                      await savePreference({ notifyGoalsAllTeams: checked })
                     }}
+                    disabled={isLoading}
                   />
                 </div>
 
-                {/* Time do Coração */}
                 <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">Time do Coração</p>
-                    <p className="text-xs text-muted-foreground">
-                      Receber notificações apenas do seu time do coração
-                    </p>
-                  </div>
+                  <p className="text-sm font-medium">
+                    Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
+                  </p>
                   <Switch
-                    checked={!notifyGoalsAllTeams && favoriteTeam !== null}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        // Quando ativa time do coração, desativa "Todos"
-                        setNotifyGoalsAllTeams(false)
-                      }
-                      // Se desativando, apenas mantém o estado atual
+                    checked={notifyGoalsFavoriteTeam}
+                    onCheckedChange={async (checked) => {
+                      setNotifyGoalsFavoriteTeam(checked)
+                      await savePreference({ notifyGoalsFavoriteTeam: checked })
                     }}
-                    disabled={!favoriteTeam || notifyGoalsAllTeams}
+                    disabled={isLoading || notifyGoalsAllTeams}
                   />
-                </div>
-
-                {/* Seletor de time - sempre visível */}
-                <div>
-                  <select
-                    value={favoriteTeam || ''}
-                    onChange={(e) => setFavoriteTeam(e.target.value || null)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Selecione um time</option>
-                    {TEAMS.map(team => (
-                      <option key={team} value={team}>
-                        {getTeamDisplayName(team)}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
             </div>
           </div>
         </Card>
 
-        {/* Botão de Salvar */}
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Salvando...' : 'Salvar Preferências'}
-        </Button>
+        {/* Quando o App está Aberto */}
+        <Card className="p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Quando o App está Aberto</h2>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Ranking</p>
+              <Switch
+                checked={bellRanking}
+                onCheckedChange={async (checked) => {
+                  setBellRanking(checked)
+                  await savePreference({ bellRanking: checked })
+                }}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">
+                Jogo do {favoriteTeam && favoriteTeam.trim() !== '' ? getTeamDisplayName(favoriteTeam) : 'Meu Time'} Iniciar
+              </p>
+              <Switch
+                checked={bellFavoriteTeamMatch}
+                onCheckedChange={async (checked) => {
+                  setBellFavoriteTeamMatch(checked)
+                  await savePreference({ bellFavoriteTeamMatch: checked })
+                }}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-3">Notificar Gol</p>
+              <div className="space-y-3 pl-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Todos os Times</p>
+                  <Switch
+                    checked={bellGoalsAllTeams}
+                    onCheckedChange={async (checked) => {
+                      setBellGoalsAllTeams(checked)
+                      await savePreference({ bellGoalsAllTeams: checked })
+                    }}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">
+                    Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
+                  </p>
+                  <Switch
+                    checked={bellGoalsFavoriteTeam}
+                    onCheckedChange={async (checked) => {
+                      setBellGoalsFavoriteTeam(checked)
+                      await savePreference({ bellGoalsFavoriteTeam: checked })
+                    }}
+                    disabled={isLoading || bellGoalsAllTeams}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
       </div>
     </ContentWrapper>
   )

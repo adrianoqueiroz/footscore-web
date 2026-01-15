@@ -30,3 +30,15 @@ export function getTeamDisplayName(teamName: string): string {
   return teamName
 }
 
+/**
+ * Normaliza o nome do time para comparação (remove espaços extras, normaliza maiúsculas/minúsculas)
+ * @param teamName - Nome do time a ser normalizado
+ * @returns Nome normalizado para comparação
+ */
+export function normalizeTeamNameForComparison(teamName: string | null | undefined): string | null {
+  if (!teamName) return null
+  
+  // Remover espaços extras e normalizar
+  return teamName.trim()
+}
+

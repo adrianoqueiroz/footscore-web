@@ -686,9 +686,6 @@ export default function EditGame() {
                   <ChevronRight className="h-5 w-5 ml-1" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Debug: Index {currentMatchIndex} de {matches.length - 1} (total: {matches.length})
-              </p>
             </div>
           )}
 
