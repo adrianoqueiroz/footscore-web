@@ -383,14 +383,16 @@ export default function Tickets() {
     // Verificar status da rodada antes de navegar
     try {
       const status = await matchService.getRoundStatus(selectedRound)
-      if (status && (!status.allowsNewBets || status.isBlocked)) {
+      if (status && !status.allowsNewBets) {
         // Atualizar estado local (a mensagem já existente será exibida automaticamente)
         setAllowsNewBets(false)
-        setIsBlocked(true)
+        setIsBlocked(status.isBlocked || false)
         return
       }
       
-      // Se permite novos palpites, navegar normalmente
+      // Se permite novos palpites, navegar normalmente (mesmo se isBlocked for true, se allowsNewBets for true, permite)
+      setAllowsNewBets(status?.allowsNewBets ?? true)
+      setIsBlocked(status?.isBlocked || false)
       navigate(`/games?round=${selectedRound}`)
     } catch (error) {
       console.error('Error checking round status:', error)
@@ -560,16 +562,6 @@ export default function Tickets() {
                   <p className="text-muted-foreground">
                     Você ainda não criou nenhum palpite nesta rodada
                   </p>
-                  {allowsNewBets && !isBlocked && (
-                    <Button
-                      onClick={handleNewPrediction}
-                      size="lg"
-                      className="w-full"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Novo Palpite
-                    </Button>
-                  )}
                 </div>
               </Card>
             )}
@@ -587,7 +579,7 @@ export default function Tickets() {
             </div>
 
             {/* Botão Novo Palpite - apenas se permite novos palpites */}
-            {!pageLoading && !roundsLoading && selectedRound && allowsNewBets && !isBlocked && filteredTickets.length > 0 && (
+            {!pageLoading && !roundsLoading && selectedRound && allowsNewBets && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -144,27 +144,20 @@ export default function Predictions() {
     if (!selectedRound) return
     try {
       // Carregar status da rodada (allowsNewBets)
+      // A única regra é: se allowsNewBets está true, permite. Ponto.
       const status = await matchService.getRoundStatus(selectedRound)
       if (status) {
+        // Se allowsNewBets é true, permite independente de outras flags
         setIsLocked(!status.allowsNewBets)
       } else {
-        if (matches.length > 0) {
-          const sortedMatches = [...matches].sort((a, b) => {
-            const dateA = parseMatchDateTime(a)
-            const dateB = parseMatchDateTime(b)
-            if (!dateA || !dateB) return 0
-            return dateA.getTime() - dateB.getTime()
-          })
-
-          if (sortedMatches.length > 0) {
-            const locked = matchService.isMatchLocked(sortedMatches[0])
-            setIsLocked(locked)
-          }
-        }
+        // Se não tem status, assume que permite (padrão)
+        setIsLocked(false)
       }
 
     } catch (error) {
       console.error('Error loading round status:', error)
+      // Em caso de erro, assume que permite (padrão)
+      setIsLocked(false)
     }
   }
 
@@ -173,7 +166,10 @@ export default function Predictions() {
     setMatchesLoading(true)
     try {
       const data = await matchService.getMatchesByRound(selectedRound, true)
-      setMatches(data)
+      // Filtrar apenas jogos incluídos na rodada (includeInRound !== false)
+      // Jogos não incluídos não aparecem no carrossel porque não são contabilizados no ranking
+      const filteredData = data.filter(match => match.includeInRound !== false)
+      setMatches(filteredData)
       
       // Se está editando um ticket, carregar as predictions existentes
       if (editingTicketId) {
@@ -181,7 +177,7 @@ export default function Predictions() {
           const ticket = await ticketService.getTicketById(editingTicketId)
           if (ticket && ticket.predictions) {
             const existingPredictions: Record<string, Prediction> = {}
-            data.forEach((match: Match) => {
+            filteredData.forEach((match: Match) => {
               const existingPred = Array.isArray(ticket.predictions) 
                 ? ticket.predictions.find((p: any) => p.matchId === match.id)
                 : null
@@ -196,7 +192,7 @@ export default function Predictions() {
           } else {
             // Se não encontrou o ticket, inicializar com zeros
             const initial: Record<string, Prediction> = {}
-            data.forEach((match: Match) => {
+            filteredData.forEach((match: Match) => {
               initial[match.id] = {
                 matchId: match.id,
                 homeScore: 0,
@@ -209,7 +205,7 @@ export default function Predictions() {
           console.error('Error loading ticket for editing:', error)
           // Em caso de erro, inicializar com zeros
           const initial: Record<string, Prediction> = {}
-          data.forEach((match: Match) => {
+          filteredData.forEach((match: Match) => {
             initial[match.id] = {
               matchId: match.id,
               homeScore: 0,
@@ -221,7 +217,7 @@ export default function Predictions() {
       } else {
         // Se não está editando, inicializar com zeros
         const initial: Record<string, Prediction> = {}
-        data.forEach((match: Match) => {
+        filteredData.forEach((match: Match) => {
           initial[match.id] = {
             matchId: match.id,
             homeScore: 0,
@@ -307,9 +303,11 @@ export default function Predictions() {
     if (!user || !selectedRound) return
 
     // Verificar status da rodada antes de submeter (pode ter mudado enquanto o usuário estava preenchendo)
+    // A única regra é: se allowsNewBets está true, permite. Ponto.
     try {
       const status = await matchService.getRoundStatus(selectedRound)
-      if (status && !status.allowsNewBets) {
+      if (status && status.allowsNewBets === false) {
+        // Se allowsNewBets é explicitamente false, bloqueia
         setIsLocked(true)
         const errorMessage = editingTicketId 
           ? 'Esta rodada não aceita mais edições de palpites.'
@@ -317,13 +315,12 @@ export default function Predictions() {
         toast.error(errorMessage)
         return
       }
-      // Atualizar estado local também
-      if (status) {
-        setIsLocked(!status.allowsNewBets)
-      }
+      // Se allowsNewBets é true ou não existe (undefined/null), permite
+      setIsLocked(false)
     } catch (error) {
       console.error('Error checking round status:', error)
-      // Continuar mesmo se houver erro ao verificar status, o backend vai validar
+      // Em caso de erro, permite continuar (o backend vai validar)
+      setIsLocked(false)
     }
 
     const predictionsArray = Object.values(predictions)
@@ -352,8 +349,9 @@ export default function Predictions() {
         toast.success('Palpite criado com sucesso!')
       }
       
+      // Reinicializar predictions apenas com matches incluídos na rodada
       const initial: Record<string, Prediction> = {}
-      matches.forEach(match => {
+      matches.filter(match => match.includeInRound !== false).forEach(match => {
         initial[match.id] = {
           matchId: match.id,
           homeScore: 0,
@@ -370,8 +368,9 @@ export default function Predictions() {
     } catch (error: any) {
       console.error('Error creating ticket:', error)
       
-      // Verificar se é erro de rodada fechada
       const errorMessage = error?.message || error?.error || ''
+      
+      // Verificar se é erro de rodada fechada - apenas se o backend retornar explicitamente
       const isRoundClosedError = 
         error?.status === 400 && (
           errorMessage.includes('não permite novos palpites') ||
@@ -381,9 +380,23 @@ export default function Predictions() {
         )
       
       if (isRoundClosedError) {
-        setIsLocked(true)
-        toast.error('Esta rodada não aceita mais palpites.')
+        // Se o backend retornou erro de rodada fechada, verificar status novamente
+        try {
+          const status = await matchService.getRoundStatus(selectedRound)
+          // Só bloquear se o status confirmar que não permite
+          if (status && status.allowsNewBets === false) {
+            setIsLocked(true)
+            toast.error('Esta rodada não aceita mais palpites.')
+          } else {
+            // Se o status diz que permite, mostrar erro mas não bloquear
+            toast.error(errorMessage || 'Erro ao criar palpite. Tente novamente.')
+          }
+        } catch (statusError) {
+          // Se não conseguir verificar status, mostrar erro mas não bloquear
+          toast.error(errorMessage || 'Erro ao criar palpite. Tente novamente.')
+        }
       } else {
+        // Outros erros - apenas mostrar mensagem
         toast.error(errorMessage || 'Erro ao criar palpite. Tente novamente.')
       }
     } finally {
@@ -971,7 +984,7 @@ export default function Predictions() {
                               return next
                             })
                           }}
-                          disabled={isLocked || matchLocked || currentPrediction.homeScore === 0}
+                          disabled={isLocked || currentPrediction.homeScore === 0}
                           className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Minus className="h-9 w-9" />
@@ -1021,7 +1034,7 @@ export default function Predictions() {
                               return next
                             })
                           }}
-                          disabled={isLocked || matchLocked || currentPrediction.homeScore === 10}
+                          disabled={isLocked || currentPrediction.homeScore === 10}
                           className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-9 w-9" />
@@ -1081,7 +1094,7 @@ export default function Predictions() {
                               return next
                             })
                           }}
-                          disabled={isLocked || matchLocked || currentPrediction.awayScore === 0}
+                          disabled={isLocked || currentPrediction.awayScore === 0}
                           className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Minus className="h-9 w-9" />
@@ -1131,7 +1144,7 @@ export default function Predictions() {
                               return next
                             })
                           }}
-                          disabled={isLocked || matchLocked || currentPrediction.awayScore === 10}
+                          disabled={isLocked || currentPrediction.awayScore === 10}
                           className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-9 w-9" />

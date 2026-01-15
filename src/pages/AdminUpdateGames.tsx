@@ -81,6 +81,9 @@ export default function AdminUpdateGames() {
   const [roundsSelectorLoading, setRoundsSelectorLoading] = useState(false)
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
   const carouselContainerRef = useRef<HTMLDivElement>(null)
+  const [currentMatchIndex2, setCurrentMatchIndex2] = useState(0)
+  const carouselContainerRef2 = useRef<HTMLDivElement>(null)
+  const [carouselWidth2, setCarouselWidth2] = useState(0)
   const [carouselWidth, setCarouselWidth] = useState(0)
   const [showDateTimeModal, setShowDateTimeModal] = useState(false)
   const [editingMatchForDateTime, setEditingMatchForDateTime] = useState<string | null>(null)
@@ -235,6 +238,38 @@ export default function AdminUpdateGames() {
     }
   }, [updateGamesMatches.length])
 
+  // Calcular largura do carrossel2 (duplicado)
+  useEffect(() => {
+    if (updateGamesMatches.length === 0) return
+
+    const updateCarouselWidth2 = () => {
+      if (carouselContainerRef2.current) {
+        const rect = carouselContainerRef2.current.getBoundingClientRect()
+        if (rect.width > 0) {
+          setCarouselWidth2(rect.width)
+        }
+      }
+    }
+
+    const timeoutId = setTimeout(updateCarouselWidth2, 100)
+
+    const observer = new ResizeObserver(() => {
+      updateCarouselWidth2()
+    })
+
+    if (carouselContainerRef2.current) {
+      observer.observe(carouselContainerRef2.current)
+    }
+
+    window.addEventListener('resize', updateCarouselWidth2)
+
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('resize', updateCarouselWidth2)
+      observer.disconnect()
+    }
+  }, [updateGamesMatches.length])
+
   // Configurar sensores para drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -254,13 +289,13 @@ export default function AdminUpdateGames() {
   )
 
   const handleCarouselNavigation = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentMatchIndex > 0) {
-      const newIndex = currentMatchIndex - 1
-      setCurrentMatchIndex(newIndex)
+    if (direction === 'prev' && currentMatchIndex2 > 0) {
+      const newIndex = currentMatchIndex2 - 1
+      setCurrentMatchIndex2(newIndex)
       setSelectedMatchId(updateGamesMatches[newIndex].id)
-    } else if (direction === 'next' && currentMatchIndex < updateGamesMatches.length - 1) {
-      const newIndex = currentMatchIndex + 1
-      setCurrentMatchIndex(newIndex)
+    } else if (direction === 'next' && currentMatchIndex2 < updateGamesMatches.length - 1) {
+      const newIndex = currentMatchIndex2 + 1
+      setCurrentMatchIndex2(newIndex)
       setSelectedMatchId(updateGamesMatches[newIndex].id)
     }
   }
@@ -309,6 +344,15 @@ export default function AdminUpdateGames() {
       }))
       setUpdateGamesMatches(matchesWithDefaults)
       
+      // Inicializar carrossel novo com o primeiro match
+      if (matchesWithDefaults.length > 0) {
+        setCurrentMatchIndex2(0)
+        setSelectedMatchId(matchesWithDefaults[0].id)
+      } else {
+        setCurrentMatchIndex2(0)
+        setSelectedMatchId(null)
+      }
+      
       const predefinedTimes = config.getGameTimesSync().map(t => t.trim())
       const customMatches = new Set<string>()
       matchesWithDefaults.forEach(match => {
@@ -339,6 +383,16 @@ export default function AdminUpdateGames() {
           awayScore: m.awayScore ?? undefined,
         }))
         setUpdateGamesMatches(matchesWithDefaults)
+        
+        // Inicializar carrossel novo com o primeiro match
+        if (matchesWithDefaults.length > 0) {
+          setCurrentMatchIndex2(0)
+          setSelectedMatchId(matchesWithDefaults[0].id)
+        } else {
+          setCurrentMatchIndex2(0)
+          setSelectedMatchId(null)
+        }
+        
         setAllowsNewBets(true)
         setIsActive(true)
       } catch (fallbackError) {
@@ -744,24 +798,24 @@ export default function AdminUpdateGames() {
             {/* Carrossel de Jogos */}
             {updateGamesMatches.length > 0 && (
               <Card className="p-0 relative overflow-hidden">
-                {updateGamesMatches[currentMatchIndex] && (
+                {updateGamesMatches[currentMatchIndex2] && (
                   <div className="px-4 pt-2 pb-1 border-b border-border/30">
                     <div className="flex justify-center">
                       <div
                         className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-primary/10 transition-all border border-dashed border-primary/30 hover:border-primary/50 bg-primary/5 group"
                         onClick={() => {
-                          setEditingMatchForDateTime(updateGamesMatches[currentMatchIndex].id)
-                          setTempDate(updateGamesMatches[currentMatchIndex].date || '')
-                          setTempTime(updateGamesMatches[currentMatchIndex].time || '')
+                          setEditingMatchForDateTime(updateGamesMatches[currentMatchIndex2].id)
+                          setTempDate(updateGamesMatches[currentMatchIndex2].date || '')
+                          setTempTime(updateGamesMatches[currentMatchIndex2].time || '')
                           setShowDateTimeModal(true)
                         }}
                       >
                         <Calendar className="h-4 w-4 text-primary group-hover:text-primary/80" />
                         <span className="text-sm font-medium text-foreground group-hover:text-primary/80">
-                          {updateGamesMatches[currentMatchIndex].date && updateGamesMatches[currentMatchIndex].time
-                            ? `${new Date(updateGamesMatches[currentMatchIndex].date).toLocaleDateString('pt-BR')} às ${updateGamesMatches[currentMatchIndex].time}`
-                            : updateGamesMatches[currentMatchIndex].date
-                              ? `${new Date(updateGamesMatches[currentMatchIndex].date).toLocaleDateString('pt-BR')} - Horário não definido`
+                          {updateGamesMatches[currentMatchIndex2].date && updateGamesMatches[currentMatchIndex2].time
+                            ? `${new Date(updateGamesMatches[currentMatchIndex2].date).toLocaleDateString('pt-BR')} às ${updateGamesMatches[currentMatchIndex2].time}`
+                            : updateGamesMatches[currentMatchIndex2].date
+                              ? `${new Date(updateGamesMatches[currentMatchIndex2].date).toLocaleDateString('pt-BR')} - Horário não definido`
                               : 'Clique para definir data e horário'
                           }
                         </span>
@@ -770,17 +824,15 @@ export default function AdminUpdateGames() {
                     </div>
                   </div>
                 )}
-
-                {/* Carrossel */}
-                <div
-                  ref={carouselContainerRef}
+                <div 
+                  ref={carouselContainerRef2} 
                   className="relative overflow-hidden pt-3 pb-1"
                   style={{ touchAction: 'pan-x' }}
                 >
                   <motion.div
                     className="flex"
                     animate={{
-                      x: `-${currentMatchIndex * 100}%`,
+                      x: `-${currentMatchIndex2 * 100}%`,
                     }}
                     transition={{
                       type: 'spring',
@@ -789,9 +841,9 @@ export default function AdminUpdateGames() {
                     }}
                     drag="x"
                     dragConstraints={
-                      carouselWidth > 0
+                      carouselWidth2 > 0
                         ? {
-                            left: -(updateGamesMatches.length - 1) * carouselWidth,
+                            left: -(updateGamesMatches.length - 1) * carouselWidth2,
                             right: 0,
                           }
                         : false
@@ -800,18 +852,18 @@ export default function AdminUpdateGames() {
                     dragDirectionLock={true}
                     onDragStart={(e) => {
                       const target = e.target as HTMLElement
-                      if (target.closest('button') || target.closest('[data-no-drag]')) {
+                      if (target.closest('button') || target.closest('[data-navigation]') || target.closest('[data-no-drag]')) {
                         return false
                       }
                     }}
                     onDragEnd={(_, info) => {
                       const threshold = 80
                       const direction = info.offset.x > 0 ? -1 : 1
-                      const newIndex = currentMatchIndex + direction
-
+                      const newIndex = currentMatchIndex2 + direction
+                      
                       if (Math.abs(info.offset.x) > threshold) {
                         if (newIndex >= 0 && newIndex < updateGamesMatches.length) {
-                          setCurrentMatchIndex(newIndex)
+                          setCurrentMatchIndex2(newIndex)
                           setSelectedMatchId(updateGamesMatches[newIndex].id)
                         }
                       }
@@ -824,9 +876,9 @@ export default function AdminUpdateGames() {
                         <div
                           key={match.id}
                           className="flex-shrink-0 p-4"
-                          style={{
-                            width: carouselWidth > 0 ? carouselWidth : '100%',
-                            minWidth: carouselWidth > 0 ? carouselWidth : '100%',
+                          style={{ 
+                            width: carouselWidth2 > 0 ? carouselWidth2 : '100%',
+                            minWidth: carouselWidth2 > 0 ? carouselWidth2 : '100%',
                           }}
                         >
                           <div className="flex flex-col items-center gap-2 w-full">
@@ -836,19 +888,43 @@ export default function AdminUpdateGames() {
                                 <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="xl" className="h-20 w-20" noCircle />
                                 <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(match.homeTeam)}</span>
                               </div>
-
+                              
                               <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
                                 <div className="flex items-center gap-2">
-                                  <div className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'}`}>
+                                  <div 
+                                    className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'} cursor-pointer hover:opacity-70 transition-opacity`}
+                                    onClick={() => {
+                                      setShowScoreHint(prev => {
+                                        if (prev[match.id] === 'home') {
+                                          const next = { ...prev }
+                                          delete next[match.id]
+                                          return next
+                                        }
+                                        return { ...prev, [match.id]: 'home' }
+                                      })
+                                    }}
+                                  >
                                     {match.homeScore ?? 0}
                                   </div>
                                   <span className="text-3xl font-bold text-muted-foreground">×</span>
-                                  <div className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'}`}>
+                                  <div 
+                                    className={`text-4xl font-bold tabular-nums ${isCurrentMatch ? 'text-primary' : 'text-foreground'} cursor-pointer hover:opacity-70 transition-opacity`}
+                                    onClick={() => {
+                                      setShowScoreHint(prev => {
+                                        if (prev[match.id] === 'away') {
+                                          const next = { ...prev }
+                                          delete next[match.id]
+                                          return next
+                                        }
+                                        return { ...prev, [match.id]: 'away' }
+                                      })
+                                    }}
+                                  >
                                     {match.awayScore ?? 0}
                                   </div>
                                 </div>
                               </div>
-
+                              
                               <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
                                 <span className="text-xs font-medium text-muted-foreground">Visitante</span>
                                 <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="xl" className="h-20 w-20" noCircle />
@@ -905,19 +981,29 @@ export default function AdminUpdateGames() {
                     })}
                   </motion.div>
                 </div>
-
+                
                 {/* Barra de progresso */}
                 <div className="w-full px-4 pt-2 pb-2 border-t border-border/30">
                   <div className="w-full h-1 bg-secondary rounded-full overflow-hidden mb-2">
                     <motion.div
                       className="h-full bg-primary rounded-full"
                       initial={{ width: '0%' }}
-                      animate={{ width: `${updateGamesMatches.length > 0 ? ((currentMatchIndex + 1) / updateGamesMatches.length) * 100 : 0}%` }}
+                      animate={{ 
+                        width: updateGamesMatches.length > 0
+                          ? updateGamesMatches.length === 1
+                            ? '100%'
+                            : currentMatchIndex2 === 0 
+                              ? '0%' 
+                              : currentMatchIndex2 === updateGamesMatches.length - 1 
+                                ? '100%' 
+                                : `${(currentMatchIndex2 / (updateGamesMatches.length - 1)) * 100}%`
+                          : '0%'
+                      }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
-                    {updateGamesMatches.length > 0 ? `Jogo ${currentMatchIndex + 1} de ${updateGamesMatches.length}` : ''}
+                    {updateGamesMatches.length > 0 ? `Jogo ${currentMatchIndex2 + 1} de ${updateGamesMatches.length}` : ''}
                   </p>
                 </div>
               </Card>
@@ -931,7 +1017,7 @@ export default function AdminUpdateGames() {
                     variant="outline"
                     size="lg"
                     onClick={() => handleCarouselNavigation('prev')}
-                    disabled={currentMatchIndex === 0}
+                    disabled={currentMatchIndex2 === 0}
                     className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
@@ -942,7 +1028,7 @@ export default function AdminUpdateGames() {
                     variant="primary"
                     size="lg"
                     onClick={() => handleCarouselNavigation('next')}
-                    disabled={currentMatchIndex === updateGamesMatches.length - 1}
+                    disabled={currentMatchIndex2 === updateGamesMatches.length - 1}
                     className="flex-1"
                   >
                     <span className="text-sm">Próximo</span>

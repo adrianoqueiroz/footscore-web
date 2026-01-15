@@ -51,7 +51,6 @@ export interface Match {
   homeScore?: number
   awayScore?: number
   status?: 'scheduled' | 'live' | 'finished'
-  allowBets?: boolean
   includeInRound?: boolean // Indica se o jogo deve ser incluído na rodada (útil quando um jogo muda de data)
   order?: number // Ordem de exibição dos jogos (baseada na criação ou reordenação manual)
 }
