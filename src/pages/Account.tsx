@@ -62,7 +62,7 @@ export default function Account() {
         <div className="flex flex-col items-center mb-2">
           <div className="relative">
             {cachedAvatar ? (
-              <div className="relative h-24 w-24 rounded-full border-2 border-primary shadow-lg p-0.5 bg-background">
+              <div className="relative h-24 w-24 rounded-full border-[3px] border-primary shadow-lg p-0.5 bg-background">
                 <div className="h-full w-full rounded-full overflow-hidden">
                   <img
                     src={cachedAvatar}
@@ -72,7 +72,7 @@ export default function Account() {
                 </div>
               </div>
             ) : (
-              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/20 border-2 border-primary shadow-lg flex items-center justify-center p-0.5 bg-background">
+              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/20 border-[3px] border-primary shadow-lg flex items-center justify-center p-0.5 bg-background">
                 <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/30 to-primary/20 flex items-center justify-center">
                   <span className="text-3xl font-bold text-primary">
                     {user.name

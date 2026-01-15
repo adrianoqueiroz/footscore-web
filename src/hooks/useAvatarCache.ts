@@ -11,25 +11,41 @@ interface AvatarCacheHook {
 const avatarCache = new Map<string, string>()
 const CACHE_KEY = 'avatar_cache'
 
+// Função para inicializar o cache do localStorage (chamada uma vez)
+let cacheInitialized = false
+function initializeCache() {
+  if (cacheInitialized) return
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (cached) {
+      const parsedCache = JSON.parse(cached)
+      Object.entries(parsedCache).forEach(([key, value]) => {
+        avatarCache.set(key, value as string)
+      })
+    }
+    cacheInitialized = true
+  } catch (error) {
+    console.warn('Failed to load avatar cache from localStorage:', error)
+  }
+}
+
+// Inicializar cache imediatamente
+initializeCache()
+
 export function useAvatarCache(originalUrl: string | null | undefined): AvatarCacheHook {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  // Inicializar avatarUrl diretamente do cache se disponível
+  const getInitialAvatarUrl = (): string | null => {
+    if (!originalUrl) return null
+    // Verificar se já está no cache (após inicialização)
+    if (avatarCache.has(originalUrl)) {
+      return avatarCache.get(originalUrl)!
+    }
+    return null
+  }
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(getInitialAvatarUrl())
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Carregar cache do localStorage na inicialização
-  useEffect(() => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY)
-      if (cached) {
-        const parsedCache = JSON.parse(cached)
-        Object.entries(parsedCache).forEach(([key, value]) => {
-          avatarCache.set(key, value as string)
-        })
-      }
-    } catch (error) {
-      console.warn('Failed to load avatar cache from localStorage:', error)
-    }
-  }, [])
 
   // Salvar cache no localStorage
   const saveCache = useCallback(() => {
@@ -108,28 +124,48 @@ export function useAvatarCache(originalUrl: string | null | undefined): AvatarCa
       return
     }
 
-    // Se já temos no cache, usar diretamente
+    // Verificar cache primeiro (síncrono, sem delay)
     if (avatarCache.has(originalUrl)) {
-      setAvatarUrl(avatarCache.get(originalUrl)!)
-      setError(null)
-      setIsLoading(false)
+      const cached = avatarCache.get(originalUrl)!
+      // Só atualizar se for diferente do estado atual
+      if (avatarUrl !== cached) {
+        setAvatarUrl(cached)
+        setError(null)
+        setIsLoading(false)
+      }
       return
     }
 
-    // Caso contrário, fazer cache
+    // Se não está no cache, tentar fazer cache (assíncrono)
+    // Mas primeiro, se já temos a URL original no estado, usar ela temporariamente
+    if (avatarUrl !== originalUrl) {
+      setAvatarUrl(originalUrl)
+    }
+
+    // Fazer cache em background
+    let cancelled = false
     cacheAvatar(originalUrl)
       .then((cachedUrl) => {
-        setAvatarUrl(cachedUrl)
-        setError(null)
+        // Só atualizar se não foi cancelado (URL não mudou)
+        if (!cancelled) {
+          setAvatarUrl(cachedUrl)
+          setError(null)
+        }
       })
       .catch((error) => {
-        // Para erros de CORS ou rede, usar a URL original diretamente
+        // Para erros de CORS ou rede, manter a URL original
         // Não definir como erro para não mostrar mensagens de erro desnecessárias
-        console.warn('Failed to cache avatar (using original URL):', error)
-        setAvatarUrl(originalUrl)
-        setError(null)
-        setIsLoading(false)
+        if (!cancelled) {
+          console.warn('Failed to cache avatar (using original URL):', error)
+          setAvatarUrl(originalUrl)
+          setError(null)
+          setIsLoading(false)
+        }
       })
+
+    return () => {
+      cancelled = true
+    }
   }, [originalUrl, cacheAvatar])
 
   // Função para forçar refresh do cache
