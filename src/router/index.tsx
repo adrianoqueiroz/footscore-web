@@ -227,7 +227,7 @@ const MainLayout = ({ user }: { user: User }) => {
       <BottomNav isAdmin={!!user?.isAdmin} />
       <main 
         ref={mainContentRef}
-        className="flex-1 pb-36 md:pb-0 md:ml-64 md:pt-16 md:pl-0" 
+        className="flex-1 pb-20 md:pb-0 md:ml-64 md:pt-16 md:pl-0" 
         style={mainStyle}
       >
         <Outlet />

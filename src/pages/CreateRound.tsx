@@ -119,8 +119,8 @@ export default function CreateRound({ onSave, onCancel }: CreateRoundProps) {
   }
 
   return (
-    <div className="flex justify-center min-h-screen bg-background/95 bg-grid-small-white/[0.07]">
-      <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 p-4 md:p-6 lg:p-8 pb-24">
+    <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07]">
+      <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 p-4 md:p-6 lg:p-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-6">Criar Nova Rodada</h2>
           
