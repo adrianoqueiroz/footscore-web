@@ -431,19 +431,9 @@ export default function Ranking() {
               disabled={allMatchesScheduled}
             >
               Ranking Geral
-              {allMatchesScheduled ? (
-                <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                  Aguardando
-                </span>
-              ) : totalAllRanking > 0 && !showRankingLoading ? (
-                <span className="ml-2 text-xs bg-background/50 px-1.5 py-0.5 rounded">
-                  {totalAllRanking}
-                </span>
-              ) : showRankingLoading ? (
-                <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                  ...
-                </span>
-              ) : null}
+              <span className="ml-2 text-xs bg-background/50 px-1.5 py-0.5 rounded">
+                {allMatchesScheduled || showRankingLoading ? 0 : totalAllRanking}
+              </span>
             </Button>
             <Button
               variant={view === 'my' ? 'primary' : 'outline'}
@@ -453,19 +443,9 @@ export default function Ranking() {
               disabled={allMatchesScheduled}
             >
               Meu Ranking
-              {allMatchesScheduled ? (
-                <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                  Aguardando
-                </span>
-              ) : totalMyRanking > 0 && !showRankingLoading ? (
-                <span className="ml-2 text-xs bg-background/50 px-1.5 py-0.5 rounded">
-                  {totalMyRanking}
-                </span>
-              ) : showRankingLoading ? (
-                <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                  ...
-                </span>
-              ) : null}
+              <span className="ml-2 text-xs bg-background/50 px-1.5 py-0.5 rounded">
+                {allMatchesScheduled || showRankingLoading ? 0 : totalMyRanking}
+              </span>
             </Button>
           </div>
         )}

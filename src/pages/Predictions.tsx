@@ -37,6 +37,8 @@ export default function Predictions() {
   const [showSummaryModal, setShowSummaryModal] = useState(false)
   const carouselContainerRef = useRef<HTMLDivElement>(null)
   const [carouselWidth, setCarouselWidth] = useState(0)
+  const [isDraggingHorizontally, setIsDraggingHorizontally] = useState(false)
+  const [isButtonPressed, setIsButtonPressed] = useState(false)
   const { rounds, selectedRound, setSelectedRound, validateSelection } = useRoundSelector()
   const toast = useToastContext()
   const confirm = useConfirmContext()
@@ -766,7 +768,7 @@ export default function Predictions() {
             <div 
               ref={carouselContainerRef} 
               className="relative overflow-hidden pt-3 pb-1"
-              style={{ touchAction: 'pan-x' }}
+              style={{ touchAction: isDraggingHorizontally ? 'pan-x' : 'pan-y pinch-zoom' }}
             >
               <motion.div
                 className="flex"
@@ -789,6 +791,13 @@ export default function Predictions() {
                 }
                 dragElastic={0.2}
                 dragDirectionLock={true}
+                onDrag={(_, info) => {
+                  // Detectar se está arrastando horizontalmente (movimento horizontal maior que vertical)
+                  const isHorizontal = Math.abs(info.offset.x) > Math.abs(info.offset.y) && Math.abs(info.offset.x) > 10
+                  if (isHorizontal !== isDraggingHorizontally) {
+                    setIsDraggingHorizontally(isHorizontal)
+                  }
+                }}
                 onDragStart={(e) => {
                   const target = e.target as HTMLElement
                   if (target.closest('button') || target.closest('[data-navigation]')) {
@@ -796,6 +805,9 @@ export default function Predictions() {
                   }
                 }}
                 onDragEnd={(_, info) => {
+                  // Reabilitar scroll vertical após o drag
+                  setIsDraggingHorizontally(false)
+                  
                   const threshold = 80
                   const direction = info.offset.x > 0 ? -1 : 1
                   const newIndex = currentIndex + direction
@@ -935,7 +947,10 @@ export default function Predictions() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-2 w-full p-4" style={{ touchAction: 'none' }}>
+            <div 
+              className="flex items-center justify-center gap-2 w-full p-4" 
+              style={{ touchAction: isButtonPressed ? 'none' : 'pan-y pinch-zoom' }}
+            >
                   {/* Controles Casa */}
                   <div className="flex-1 flex flex-col items-center gap-3">
                     <span className="text-xs font-medium text-muted-foreground">Casa</span>
@@ -966,6 +981,7 @@ export default function Predictions() {
                           variant="outline"
                           size="lg"
                           onTouchStart={() => {
+                            setIsButtonPressed(true)
                             // Trigger háptico no início do toque (melhor para iOS)
                             triggerHaptic('light')
                             setShowScoreHint(prev => {
@@ -973,6 +989,18 @@ export default function Predictions() {
                               delete next[currentMatch.id]
                               return next
                             })
+                          }}
+                          onTouchEnd={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseDown={() => {
+                            setIsButtonPressed(true)
+                          }}
+                          onMouseUp={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseLeave={() => {
+                            setIsButtonPressed(false)
                           }}
                           onClick={() => {
                             if (currentPrediction.homeScore > 0) {
@@ -1016,6 +1044,7 @@ export default function Predictions() {
                           variant="outline"
                           size="lg"
                           onTouchStart={() => {
+                            setIsButtonPressed(true)
                             // Trigger háptico no início do toque (melhor para iOS)
                             triggerHaptic('light')
                             setShowScoreHint(prev => {
@@ -1023,6 +1052,18 @@ export default function Predictions() {
                               delete next[currentMatch.id]
                               return next
                             })
+                          }}
+                          onTouchEnd={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseDown={() => {
+                            setIsButtonPressed(true)
+                          }}
+                          onMouseUp={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseLeave={() => {
+                            setIsButtonPressed(false)
                           }}
                           onClick={() => {
                             if (currentPrediction.homeScore < 10) {
@@ -1076,6 +1117,7 @@ export default function Predictions() {
                           variant="outline"
                           size="lg"
                           onTouchStart={() => {
+                            setIsButtonPressed(true)
                             // Trigger háptico no início do toque (melhor para iOS)
                             triggerHaptic('light')
                             setShowScoreHint(prev => {
@@ -1083,6 +1125,18 @@ export default function Predictions() {
                               delete next[currentMatch.id]
                               return next
                             })
+                          }}
+                          onTouchEnd={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseDown={() => {
+                            setIsButtonPressed(true)
+                          }}
+                          onMouseUp={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseLeave={() => {
+                            setIsButtonPressed(false)
                           }}
                           onClick={() => {
                             if (currentPrediction.awayScore > 0) {
@@ -1126,6 +1180,7 @@ export default function Predictions() {
                           variant="outline"
                           size="lg"
                           onTouchStart={() => {
+                            setIsButtonPressed(true)
                             // Trigger háptico no início do toque (melhor para iOS)
                             triggerHaptic('light')
                             setShowScoreHint(prev => {
@@ -1133,6 +1188,18 @@ export default function Predictions() {
                               delete next[currentMatch.id]
                               return next
                             })
+                          }}
+                          onTouchEnd={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseDown={() => {
+                            setIsButtonPressed(true)
+                          }}
+                          onMouseUp={() => {
+                            setIsButtonPressed(false)
+                          }}
+                          onMouseLeave={() => {
+                            setIsButtonPressed(false)
                           }}
                           onClick={() => {
                             if (currentPrediction.awayScore < 10) {

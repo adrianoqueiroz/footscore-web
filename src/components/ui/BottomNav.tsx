@@ -43,6 +43,12 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   }, [])
 
+  // Detectar se está em modo PWA (standalone)
+  const isPWA = React.useMemo(() => {
+    return (window.navigator as any).standalone || 
+           window.matchMedia('(display-mode: standalone)').matches
+  }, [])
+
   // Prevenir múltiplas navegações simultâneas
   const isNavigatingRef = React.useRef(false)
 
@@ -69,7 +75,14 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
     <>
       {/* Mobile: Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 safe-area-inset-bottom overflow-x-hidden md:hidden">
-        <div className="mx-auto flex max-w-md w-full items-center px-2 pt-3 pb-6">
+        <div 
+          className={cn(
+            "mx-auto flex max-w-md w-full items-center px-2 pt-3",
+            // Padding normal quando não é PWA, extra quando é PWA + iPhone
+            !isPWA || !isIOS ? "pb-2" : ""
+          )}
+          style={isPWA && isIOS ? { paddingBottom: '26px' } : undefined}
+        >
 
           {/* All Navigation Items - Equally distributed */}
           <div className="flex w-full items-center justify-around">
@@ -140,7 +153,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                       'relative flex h-6 w-6 items-center justify-center rounded-full font-semibold transition-all overflow-hidden',
                       isAccountPage
                         ? 'border-2 border-primary shadow-sm'
-                        : 'border-2 border-muted-foreground/30'
+                        : 'border-2 border-muted-foreground'
                     )}>
                       {cachedAvatar ? (
                         <img
@@ -274,7 +287,7 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
               'relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all overflow-hidden flex-shrink-0',
               isAccountPage
                 ? 'border-3 border-primary shadow-sm'
-                : 'border-3 border-muted-foreground/30'
+                : 'border-3 border-muted-foreground'
             )}>
               {cachedAvatar ? (
                 <img

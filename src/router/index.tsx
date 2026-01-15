@@ -17,7 +17,7 @@ import AdminManagePalpites from '@/pages/AdminManagePalpites'
 import AdminManageUsers from '@/pages/AdminManageUsers'
 import AdminSettings from '@/pages/AdminSettings'
 import DebugPush from '@/pages/DebugPush'
-import EditRound from '@/pages/EditRound'
+import EditGame from '@/pages/EditGame'
 import EditPhone from '@/pages/EditPhone'
 import Account from '@/pages/Account'
 import Profile from '@/pages/Profile'
@@ -118,7 +118,7 @@ const AppRoutes = () => {
                       <Route path="/admin/manage-palpites" element={<AdminManagePalpites />} />
                       <Route path="/admin/manage-users" element={<AdminManageUsers />} />
                       <Route path="/admin/settings" element={<AdminSettings />} />
-                      <Route path="/edit-round" element={<EditRound />} />
+                      <Route path="/admin/edit-game" element={<EditGame />} />
                     </Route>
                   </Route>
                 </Routes>
