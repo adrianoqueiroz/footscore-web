@@ -114,6 +114,11 @@ export const authService = {
     bellFavoriteTeamMatch: boolean
     bellGoalsAllTeams: boolean
     bellGoalsFavoriteTeam: boolean
+    bellRoundBets: boolean
+    bellMatchStatusAllTeams: boolean
+    bellMatchStatusFavoriteTeam: boolean
+    notifyMatchStatusAllTeams: boolean
+    notifyMatchStatusFavoriteTeam: boolean
   }> {
     try {
       const response = await apiService.get<{ preferences: any }>('/auth/notification-preferences')
@@ -128,7 +133,12 @@ export const authService = {
         bellRanking: response.preferences.bellRanking ?? true,
         bellFavoriteTeamMatch: response.preferences.bellFavoriteTeamMatch ?? true,
         bellGoalsAllTeams: response.preferences.bellGoalsAllTeams ?? true,
-        bellGoalsFavoriteTeam: response.preferences.bellGoalsFavoriteTeam ?? true
+        bellGoalsFavoriteTeam: response.preferences.bellGoalsFavoriteTeam ?? true,
+        bellRoundBets: response.preferences.bellRoundBets ?? true,
+        bellMatchStatusAllTeams: response.preferences.bellMatchStatusAllTeams ?? true,
+        bellMatchStatusFavoriteTeam: response.preferences.bellMatchStatusFavoriteTeam ?? true,
+        notifyMatchStatusAllTeams: response.preferences.notifyMatchStatusAllTeams ?? true,
+        notifyMatchStatusFavoriteTeam: response.preferences.notifyMatchStatusFavoriteTeam ?? true
       }
     } catch (error) {
       console.error('Error fetching notification preferences:', error)
@@ -144,7 +154,12 @@ export const authService = {
         bellRanking: true,
         bellFavoriteTeamMatch: true,
         bellGoalsAllTeams: true,
-        bellGoalsFavoriteTeam: true
+        bellGoalsFavoriteTeam: true,
+        bellRoundBets: true,
+        bellMatchStatusAllTeams: true,
+        bellMatchStatusFavoriteTeam: true,
+        notifyMatchStatusAllTeams: true,
+        notifyMatchStatusFavoriteTeam: true
       }
     }
   },
@@ -161,6 +176,11 @@ export const authService = {
     bellFavoriteTeamMatch?: boolean
     bellGoalsAllTeams?: boolean
     bellGoalsFavoriteTeam?: boolean
+    bellRoundBets?: boolean
+    bellMatchStatusAllTeams?: boolean
+    bellMatchStatusFavoriteTeam?: boolean
+    notifyMatchStatusAllTeams?: boolean
+    notifyMatchStatusFavoriteTeam?: boolean
   }): Promise<void> {
     try {
       await apiService.put('/auth/notification-preferences', preferences)

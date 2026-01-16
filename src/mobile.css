@@ -1,16 +1,7 @@
-/* Mobile-specific styles to prevent text selection and improve touch interaction */
+/* Mobile-specific styles to improve touch interaction */
 
-/* Block text selection on all elements by default */
-*,
-*::before,
-*::after {
-  -webkit-touch-callout: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
+/* Removed global text selection blocking to allow development and debugging */
+/* Text selection is now only disabled on specific interactive elements when needed */
 
 /* Allow text selection in form elements */
 input,

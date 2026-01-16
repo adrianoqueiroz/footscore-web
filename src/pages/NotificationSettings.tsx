@@ -36,6 +36,11 @@ export default function NotificationSettings() {
   const [bellFavoriteTeamMatch, setBellFavoriteTeamMatch] = useState(true)
   const [bellGoalsAllTeams, setBellGoalsAllTeams] = useState(true)
   const [bellGoalsFavoriteTeam, setBellGoalsFavoriteTeam] = useState(true)
+  const [bellRoundBets, setBellRoundBets] = useState(true)
+  const [bellMatchStatusAllTeams, setBellMatchStatusAllTeams] = useState(true)
+  const [bellMatchStatusFavoriteTeam, setBellMatchStatusFavoriteTeam] = useState(true)
+  const [notifyMatchStatusAllTeams, setNotifyMatchStatusAllTeams] = useState(true)
+  const [notifyMatchStatusFavoriteTeam, setNotifyMatchStatusFavoriteTeam] = useState(true)
   const [testingSupport, setTestingSupport] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [favoriteTeam, setFavoriteTeam] = useState<string>('')
@@ -84,6 +89,11 @@ export default function NotificationSettings() {
         setBellFavoriteTeamMatch(prefs.bellFavoriteTeamMatch ?? true)
         setBellGoalsAllTeams(prefs.bellGoalsAllTeams ?? true)
         setBellGoalsFavoriteTeam(prefs.bellGoalsFavoriteTeam ?? true)
+        setBellRoundBets(prefs.bellRoundBets ?? true)
+        setBellMatchStatusAllTeams(prefs.bellMatchStatusAllTeams ?? true)
+        setBellMatchStatusFavoriteTeam(prefs.bellMatchStatusFavoriteTeam ?? true)
+        setNotifyMatchStatusAllTeams(prefs.notifyMatchStatusAllTeams ?? true)
+        setNotifyMatchStatusFavoriteTeam(prefs.notifyMatchStatusFavoriteTeam ?? true)
       })
       .catch(error => {
         console.error('Erro ao carregar preferências de notificação:', error)
@@ -126,6 +136,11 @@ export default function NotificationSettings() {
     bellFavoriteTeamMatch?: boolean
     bellGoalsAllTeams?: boolean
     bellGoalsFavoriteTeam?: boolean
+    bellRoundBets?: boolean
+    bellMatchStatusAllTeams?: boolean
+    bellMatchStatusFavoriteTeam?: boolean
+    notifyMatchStatusAllTeams?: boolean
+    notifyMatchStatusFavoriteTeam?: boolean
   }) => {
     try {
       // Preparar valores atualizados - enviar todos os campos
@@ -140,7 +155,12 @@ export default function NotificationSettings() {
         bellRanking: updates.bellRanking ?? bellRanking,
         bellFavoriteTeamMatch: updates.bellFavoriteTeamMatch ?? bellFavoriteTeamMatch,
         bellGoalsAllTeams: updates.bellGoalsAllTeams ?? bellGoalsAllTeams,
-        bellGoalsFavoriteTeam: updates.bellGoalsFavoriteTeam ?? bellGoalsFavoriteTeam
+        bellGoalsFavoriteTeam: updates.bellGoalsFavoriteTeam ?? bellGoalsFavoriteTeam,
+        bellRoundBets: updates.bellRoundBets ?? bellRoundBets,
+        bellMatchStatusAllTeams: updates.bellMatchStatusAllTeams ?? bellMatchStatusAllTeams,
+        bellMatchStatusFavoriteTeam: updates.bellMatchStatusFavoriteTeam ?? bellMatchStatusFavoriteTeam,
+        notifyMatchStatusAllTeams: updates.notifyMatchStatusAllTeams ?? notifyMatchStatusAllTeams,
+        notifyMatchStatusFavoriteTeam: updates.notifyMatchStatusFavoriteTeam ?? notifyMatchStatusFavoriteTeam
       }
       
       await authService.updateNotificationPreferences(currentValues)
@@ -161,6 +181,11 @@ export default function NotificationSettings() {
         setBellFavoriteTeamMatch(prefs.bellFavoriteTeamMatch ?? true)
         setBellGoalsAllTeams(prefs.bellGoalsAllTeams ?? true)
         setBellGoalsFavoriteTeam(prefs.bellGoalsFavoriteTeam ?? true)
+        setBellRoundBets(prefs.bellRoundBets ?? true)
+        setBellMatchStatusAllTeams(prefs.bellMatchStatusAllTeams ?? true)
+        setBellMatchStatusFavoriteTeam(prefs.bellMatchStatusFavoriteTeam ?? true)
+        setNotifyMatchStatusAllTeams(prefs.notifyMatchStatusAllTeams ?? true)
+        setNotifyMatchStatusFavoriteTeam(prefs.notifyMatchStatusFavoriteTeam ?? true)
       } catch (reloadError) {
         console.error('Erro ao recarregar preferências:', reloadError)
       }
@@ -321,7 +346,7 @@ export default function NotificationSettings() {
 
 
   return (
-    <ContentWrapper className="pt-6 md:pt-0">
+    <ContentWrapper>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
@@ -467,6 +492,37 @@ export default function NotificationSettings() {
                 </div>
               </div>
             </div>
+
+            <div>
+              <p className="text-sm font-medium mb-3">Status de Confrontos</p>
+              <div className="space-y-3 pl-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Todos os Times</p>
+                  <Switch
+                    checked={notifyMatchStatusAllTeams}
+                    onCheckedChange={async (checked) => {
+                      setNotifyMatchStatusAllTeams(checked)
+                      await savePreference({ notifyMatchStatusAllTeams: checked })
+                    }}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">
+                    Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
+                  </p>
+                  <Switch
+                    checked={notifyMatchStatusFavoriteTeam}
+                    onCheckedChange={async (checked) => {
+                      setNotifyMatchStatusFavoriteTeam(checked)
+                      await savePreference({ notifyMatchStatusFavoriteTeam: checked })
+                    }}
+                    disabled={isLoading || notifyMatchStatusAllTeams}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -478,6 +534,18 @@ export default function NotificationSettings() {
           </div>
 
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Início/Encerramento de Palpites</p>
+              <Switch
+                checked={bellRoundBets}
+                onCheckedChange={async (checked) => {
+                  setBellRoundBets(checked)
+                  await savePreference({ bellRoundBets: checked })
+                }}
+                disabled={isLoading}
+              />
+            </div>
+
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Ranking</p>
               <Switch
@@ -502,6 +570,37 @@ export default function NotificationSettings() {
                 }}
                 disabled={isLoading}
               />
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-3">Status de Confrontos</p>
+              <div className="space-y-3 pl-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Todos os Times</p>
+                  <Switch
+                    checked={bellMatchStatusAllTeams}
+                    onCheckedChange={async (checked) => {
+                      setBellMatchStatusAllTeams(checked)
+                      await savePreference({ bellMatchStatusAllTeams: checked })
+                    }}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">
+                    Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
+                  </p>
+                  <Switch
+                    checked={bellMatchStatusFavoriteTeam}
+                    onCheckedChange={async (checked) => {
+                      setBellMatchStatusFavoriteTeam(checked)
+                      await savePreference({ bellMatchStatusFavoriteTeam: checked })
+                    }}
+                    disabled={isLoading || bellMatchStatusAllTeams}
+                  />
+                </div>
+              </div>
             </div>
 
             <div>

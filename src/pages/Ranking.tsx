@@ -246,13 +246,6 @@ export default function Ranking() {
       const eventRound = Number(event.data.round)
       
       if (selectedRound === eventRound) {
-        setRoundStatusUpdateEvent({
-          isFinished: event.data.isFinished,
-          hasLiveMatches: event.data.hasLiveMatches,
-          hasScheduledMatches: event.data.hasScheduledMatches,
-          allMatchesScheduled: event.data.allMatchesScheduled
-        })
-
         // Garantir que o aviso de gol não apareça novamente
         setShowPulsingBall(false)
 

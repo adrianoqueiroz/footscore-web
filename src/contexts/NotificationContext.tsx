@@ -101,6 +101,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if ('serviceWorker' in navigator) {
       const handleMessage = (event: MessageEvent) => {
         if (event.data && event.data.type === 'push_received') {
+          // Ignorar notificações de gol - elas não devem aparecer no sininho
+          // Gols só aparecem como bolinha na tela quando o app está aberto
+          if (event.data.data?.type === 'goal') {
+            return
+          }
+          
+          // Ignorar notificações de status de confrontos quando app está aberto
+          // Elas já são tratadas via SSE pelo useNotificationListener
+          // Só adicionar via push quando o app está fechado (mas o service worker não envia mensagem nesse caso)
+          if (event.data.data?.type === 'match_status') {
+            return
+          }
+          
           // Adicionar notificação mesmo quando o app está aberto
           // (para manter histórico e badge atualizado)
           let notificationType: NotificationItem['type'] = 'other'
@@ -126,6 +139,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Usar título e corpo do payload (já vem diferenciado para vencedor vs outros)
             defaultTitle = event.data.title || '🏆 Rodada Finalizada!'
             defaultBody = event.data.body || `A rodada ${event.data.data.round} foi finalizada`
+          } else if (event.data.data?.type === 'match_status') {
+            notificationType = 'match_status'
+            defaultTitle = event.data.title || '📊 Status do Jogo'
+            defaultBody = event.data.body || 'Status do jogo foi atualizado'
           }
           
           const newNotification: NotificationItem = {
