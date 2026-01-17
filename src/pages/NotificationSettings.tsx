@@ -430,21 +430,25 @@ export default function NotificationSettings() {
           )}
         </Card>
 
-        {/* Quando o App está Fechado (Push) */}
+        {/* Preferências de Notificações */}
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2">
             <BellRing className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Quando o App está Fechado</h2>
+            <h2 className="text-lg font-semibold">Preferências de Notificações</h2>
           </div>
+          <p className="text-xs text-muted-foreground">
+            O app decide automaticamente se você recebe notificações push (app fechado) ou no sininho (app aberto)
+          </p>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Início/Encerramento de Palpites</p>
               <Switch
-                checked={notifyRoundBets}
+                checked={notifyRoundBets && bellRoundBets}
                 onCheckedChange={async (checked) => {
                   setNotifyRoundBets(checked)
-                  await savePreference({ notifyRoundBets: checked })
+                  setBellRoundBets(checked)
+                  await savePreference({ notifyRoundBets: checked, bellRoundBets: checked })
                 }}
                 disabled={isLoading}
               />
@@ -453,106 +457,11 @@ export default function NotificationSettings() {
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Ranking</p>
               <Switch
-                checked={notifyRanking}
+                checked={notifyRanking && bellRanking}
                 onCheckedChange={async (checked) => {
                   setNotifyRanking(checked)
-                  await savePreference({ notifyRanking: checked })
-                }}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <p className="text-sm font-medium mb-3">Notificações de Gol</p>
-              <div className="space-y-3 pl-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Todos os Times</p>
-                  <Switch
-                    checked={notifyGoalsAllTeams}
-                    onCheckedChange={async (checked) => {
-                      setNotifyGoalsAllTeams(checked)
-                      await savePreference({ notifyGoalsAllTeams: checked })
-                    }}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">
-                    Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
-                  </p>
-                  <Switch
-                    checked={notifyGoalsFavoriteTeam}
-                    onCheckedChange={async (checked) => {
-                      setNotifyGoalsFavoriteTeam(checked)
-                      await savePreference({ notifyGoalsFavoriteTeam: checked })
-                    }}
-                    disabled={isLoading || notifyGoalsAllTeams}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium mb-3">Status de Confrontos</p>
-              <div className="space-y-3 pl-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Todos os Times</p>
-                  <Switch
-                    checked={notifyMatchStatusAllTeams}
-                    onCheckedChange={async (checked) => {
-                      setNotifyMatchStatusAllTeams(checked)
-                      await savePreference({ notifyMatchStatusAllTeams: checked })
-                    }}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">
-                    Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
-                  </p>
-                  <Switch
-                    checked={notifyMatchStatusFavoriteTeam}
-                    onCheckedChange={async (checked) => {
-                      setNotifyMatchStatusFavoriteTeam(checked)
-                      await savePreference({ notifyMatchStatusFavoriteTeam: checked })
-                    }}
-                    disabled={isLoading || notifyMatchStatusAllTeams}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Quando o App está Aberto */}
-        <Card className="p-4 space-y-4">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Quando o App está Aberto</h2>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Início/Encerramento de Palpites</p>
-              <Switch
-                checked={bellRoundBets}
-                onCheckedChange={async (checked) => {
-                  setBellRoundBets(checked)
-                  await savePreference({ bellRoundBets: checked })
-                }}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Ranking</p>
-              <Switch
-                checked={bellRanking}
-                onCheckedChange={async (checked) => {
                   setBellRanking(checked)
-                  await savePreference({ bellRanking: checked })
+                  await savePreference({ notifyRanking: checked, bellRanking: checked })
                 }}
                 disabled={isLoading}
               />
@@ -573,15 +482,16 @@ export default function NotificationSettings() {
             </div>
 
             <div>
-              <p className="text-sm font-medium mb-3">Status de Confrontos</p>
+              <p className="text-sm font-medium mb-3">Notificações de Gol</p>
               <div className="space-y-3 pl-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">Todos os Times</p>
                   <Switch
-                    checked={bellMatchStatusAllTeams}
+                    checked={notifyGoalsAllTeams && bellGoalsAllTeams}
                     onCheckedChange={async (checked) => {
-                      setBellMatchStatusAllTeams(checked)
-                      await savePreference({ bellMatchStatusAllTeams: checked })
+                      setNotifyGoalsAllTeams(checked)
+                      setBellGoalsAllTeams(checked)
+                      await savePreference({ notifyGoalsAllTeams: checked, bellGoalsAllTeams: checked })
                     }}
                     disabled={isLoading}
                   />
@@ -592,27 +502,29 @@ export default function NotificationSettings() {
                     Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
                   </p>
                   <Switch
-                    checked={bellMatchStatusFavoriteTeam}
+                    checked={notifyGoalsFavoriteTeam && bellGoalsFavoriteTeam}
                     onCheckedChange={async (checked) => {
-                      setBellMatchStatusFavoriteTeam(checked)
-                      await savePreference({ bellMatchStatusFavoriteTeam: checked })
+                      setNotifyGoalsFavoriteTeam(checked)
+                      setBellGoalsFavoriteTeam(checked)
+                      await savePreference({ notifyGoalsFavoriteTeam: checked, bellGoalsFavoriteTeam: checked })
                     }}
-                    disabled={isLoading || bellMatchStatusAllTeams}
+                    disabled={isLoading || (notifyGoalsAllTeams && bellGoalsAllTeams)}
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-medium mb-3">Notificar Gol</p>
+              <p className="text-sm font-medium mb-3">Status de Confrontos</p>
               <div className="space-y-3 pl-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">Todos os Times</p>
                   <Switch
-                    checked={bellGoalsAllTeams}
+                    checked={notifyMatchStatusAllTeams && bellMatchStatusAllTeams}
                     onCheckedChange={async (checked) => {
-                      setBellGoalsAllTeams(checked)
-                      await savePreference({ bellGoalsAllTeams: checked })
+                      setNotifyMatchStatusAllTeams(checked)
+                      setBellMatchStatusAllTeams(checked)
+                      await savePreference({ notifyMatchStatusAllTeams: checked, bellMatchStatusAllTeams: checked })
                     }}
                     disabled={isLoading}
                   />
@@ -623,12 +535,13 @@ export default function NotificationSettings() {
                     Meu Time {favoriteTeam && favoriteTeam.trim() !== '' ? `(${getTeamDisplayName(favoriteTeam)})` : ''}
                   </p>
                   <Switch
-                    checked={bellGoalsFavoriteTeam}
+                    checked={notifyMatchStatusFavoriteTeam && bellMatchStatusFavoriteTeam}
                     onCheckedChange={async (checked) => {
-                      setBellGoalsFavoriteTeam(checked)
-                      await savePreference({ bellGoalsFavoriteTeam: checked })
+                      setNotifyMatchStatusFavoriteTeam(checked)
+                      setBellMatchStatusFavoriteTeam(checked)
+                      await savePreference({ notifyMatchStatusFavoriteTeam: checked, bellMatchStatusFavoriteTeam: checked })
                     }}
-                    disabled={isLoading || bellGoalsAllTeams}
+                    disabled={isLoading || (notifyMatchStatusAllTeams && bellMatchStatusAllTeams)}
                   />
                 </div>
               </div>

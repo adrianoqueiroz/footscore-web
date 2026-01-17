@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone as PhoneIcon, MapPin, UserCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react'
+import { Phone as PhoneIcon, MapPin, UserCircle, ArrowRight, ArrowLeft, Check, Bell, BellOff } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Logo from '@/components/ui/Logo'
 import { authService } from '@/services/auth.service'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 interface OnboardingProps {
   onComplete: () => void
 }
 
-type Step = 1 | 2 | 3
+type Step = 1 | 2 | 3 | 4
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
@@ -21,6 +22,28 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [nickname, setNickname] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notificationActivated, setNotificationActivated] = useState(false)
+  const [notificationLoading, setNotificationLoading] = useState(false)
+
+  // Push notifications hook
+  const {
+    subscribe: subscribePush,
+    isSubscribed: isPushSubscribed,
+    isSupported: pushSupported,
+    permission: pushPermission,
+    isLoading: pushLoading,
+    requestPermission: requestPushPermission
+  } = usePushNotifications()
+
+  // Detectar ambiente
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                (window.navigator as any).standalone === true
+  const isIOSPWA = isIOS && isPWA
+  const effectivePushSupported = pushSupported || isIOSPWA
 
   const formatPhone = (value: string) => {
     return value
@@ -73,6 +96,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         return
       }
       setCurrentStep(3)
+    } else if (currentStep === 3) {
+      // Apelido é opcional, pode continuar
+      setCurrentStep(4)
     }
   }
 
@@ -83,47 +109,109 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     }
   }
 
+  const handleActivateNotifications = async () => {
+    setNotificationLoading(true)
+    setError('')
+    
+    try {
+      if (isPushSubscribed) {
+        setNotificationActivated(true)
+        setNotificationLoading(false)
+        return
+      }
+
+      // Verificar permissão atual
+      const currentPermission = 'Notification' in window ? Notification.permission : 'denied'
+      
+      if (currentPermission === 'denied' && !isIOSPWA) {
+        setError('Permissão negada. Você pode ativar depois nas configurações.')
+        setNotificationActivated(false)
+        setNotificationLoading(false)
+        return
+      }
+
+      // Fazer subscribe
+      const success = await subscribePush()
+      
+      if (success) {
+        setNotificationActivated(true)
+        // Ativar todas as preferências de notificação por padrão
+        try {
+          await authService.updateNotificationPreferences({
+            notifyGoals: true,
+            notifyGoalsAllTeams: true,
+            notifyGoalsFavoriteTeam: true,
+            notifyRoundBets: true,
+            notifyRanking: true,
+            notifyBell: true,
+            notifyToast: true,
+            bellRanking: true,
+            bellFavoriteTeamMatch: true,
+            bellGoalsAllTeams: true,
+            bellGoalsFavoriteTeam: true,
+            bellRoundBets: true,
+            bellMatchStatusAllTeams: true,
+            bellMatchStatusFavoriteTeam: true,
+            notifyMatchStatusAllTeams: true,
+            notifyMatchStatusFavoriteTeam: true
+          })
+        } catch (prefError) {
+          console.error('Erro ao salvar preferências padrão:', prefError)
+          // Não bloquear o onboarding se falhar
+        }
+      } else {
+        setError('Não foi possível ativar as notificações. Você pode ativar depois nas configurações.')
+        setNotificationActivated(false)
+      }
+    } catch (error: any) {
+      console.error('Erro ao ativar notificações:', error)
+      setError('Erro ao ativar notificações. Você pode ativar depois nas configurações.')
+      setNotificationActivated(false)
+    } finally {
+      setNotificationLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (!nickname.trim() && currentStep === 3) {
-      // Apelido é opcional, pode continuar sem ele
-    }
+    if (currentStep === 4) {
+      setLoading(true)
+      try {
+        // Combinar cidade e localidade no formato "Cidade - Localidade"
+        // Localidade é sempre obrigatória
+        let cityWithLocation: string
+        
+        if (location.trim().toLowerCase() === 'sede') {
+          cityWithLocation = `${city.trim()} - Sede`
+        } else {
+          cityWithLocation = `${city.trim()} - ${location.trim()}`
+        }
 
-    setLoading(true)
-    try {
-      // Combinar cidade e localidade no formato "Cidade - Localidade"
-      // Localidade é sempre obrigatória
-      let cityWithLocation: string
-      
-      if (location.trim().toLowerCase() === 'sede') {
-        cityWithLocation = `${city.trim()} - Sede`
-      } else {
-        cityWithLocation = `${city.trim()} - ${location.trim()}`
+        const phoneNumbers = phone.replace(/\D/g, '')
+        
+        // Atualizar perfil com telefone, cidade+localidade e apelido, e definir needsOnboarding = false
+        await authService.updateProfile({
+          phone: phoneNumbers,
+          city: cityWithLocation,
+          nickname: nickname.trim() || undefined,
+          needsOnboarding: false
+        })
+        onComplete()
+      } catch (error: any) {
+        setError(error?.message || 'Erro ao salvar informações. Tente novamente.')
+      } finally {
+        setLoading(false)
       }
-
-      const phoneNumbers = phone.replace(/\D/g, '')
-      
-      // Atualizar perfil com telefone, cidade+localidade e apelido, e definir needsOnboarding = false
-      await authService.updateProfile({
-        phone: phoneNumbers,
-        city: cityWithLocation,
-        nickname: nickname.trim() || undefined,
-        needsOnboarding: false
-      })
-      onComplete()
-    } catch (error: any) {
-      setError(error?.message || 'Erro ao salvar informações. Tente novamente.')
-    } finally {
-      setLoading(false)
     }
   }
 
   const steps = [
     { number: 1, title: 'Localização', icon: MapPin },
     { number: 2, title: 'Contato', icon: PhoneIcon },
-    { number: 3, title: 'Apelido', icon: UserCircle }
+    { number: 3, title: 'Apelido', icon: UserCircle },
+    { number: 4, title: 'Notificações', icon: Bell }
   ]
 
   const getStepTitle = () => {
@@ -134,6 +222,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         return 'Qual seu WhatsApp?'
       case 3:
         return 'Como prefere ser chamado?'
+      case 4:
+        return 'Ativar Notificações'
       default:
         return 'Complete seu perfil'
     }
@@ -147,6 +237,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         return 'Vamos te avisar quando você ficar em primeiro lugar!'
       case 3:
         return 'Este campo é opcional, pode pular se quiser'
+      case 4:
+        return 'Receba notificações sobre ranking, resultados e muito mais!'
       default:
         return ''
     }
@@ -169,20 +261,20 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         style={{ flex: '1 1 auto', minHeight: 0 }}
       >
         {/* Header com Logo e Bem-vindo */}
-        <div className="text-center mb-6 flex-shrink-0">
+        <div className="text-center mb-3 md:mb-4 flex-shrink-0">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-            className="mb-4"
+            className="mb-2 md:mb-3"
           >
-            <Logo size="lg" showStars={true} animateStars={true} />
+            <Logo size="md" showStars={true} animateStars={true} />
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-xl font-semibold text-foreground mb-1"
+            className="text-lg md:text-xl font-semibold text-foreground mb-0.5 md:mb-1"
           >
             Bem-vindo!
           </motion.h2>
@@ -190,25 +282,25 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="text-sm text-muted-foreground"
+            className="text-xs md:text-sm text-muted-foreground"
           >
             Vamos configurar seu perfil em alguns passos
           </motion.p>
         </div>
 
         {/* Indicador de progresso */}
-        <div className="mb-6 w-full flex-shrink-0">
-          <div className="flex items-center justify-center mb-4 gap-2">
+        <div className="mb-4 w-full flex-shrink-0">
+          <div className="flex items-center justify-center mb-3 gap-1 md:gap-2 overflow-x-auto pb-2 pt-1 -mx-2 px-2">
             {steps.map((step, index) => {
               const StepIcon = step.icon
               const isActive = currentStep === step.number
               const isCompleted = currentStep > step.number
               
               return (
-                <div key={step.number} className="flex items-center">
-                  <div className="flex flex-col items-center min-w-[80px]">
+                <div key={step.number} className="flex items-center flex-shrink-0">
+                  <div className="flex flex-col items-center min-w-[60px] md:min-w-[70px] max-w-[80px]">
                     <motion.div
-                      className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
+                      className={`flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full border-2 transition-all ${
                         isActive
                           ? 'border-primary bg-primary text-primary-foreground'
                           : isCompleted
@@ -219,19 +311,19 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                       transition={{ duration: 0.2 }}
                     >
                       {isCompleted ? (
-                        <Check className="h-6 w-6" />
+                        <Check className="h-4 w-4 md:h-5 md:w-5" />
                       ) : (
-                        <StepIcon className="h-6 w-6" />
+                        <StepIcon className="h-4 w-4 md:h-5 md:w-5" />
                       )}
                     </motion.div>
-                    <span className={`text-xs mt-2 text-center whitespace-nowrap ${
+                    <span className={`text-[10px] md:text-xs mt-1.5 md:mt-2 text-center whitespace-nowrap px-0.5 ${
                       isActive ? 'text-primary font-semibold' : 'text-muted-foreground'
                     }`}>
                       {step.title}
                     </span>
                   </div>
                   {index < steps.length - 1 && (
-                    <div className={`w-12 md:w-16 h-0.5 mx-2 ${
+                    <div className={`w-6 md:w-8 lg:w-12 h-0.5 mx-1 md:mx-2 flex-shrink-0 ${
                       isCompleted ? 'bg-primary' : 'bg-muted-foreground/30'
                     }`} />
                   )}
@@ -252,7 +344,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </div>
 
         {/* Conteúdo do formulário */}
-        <div className="text-center mb-6 flex-shrink-0">
+        <div className="text-center mb-4 md:mb-6 flex-shrink-0">
           <motion.div
             key={currentStep}
             initial={{ opacity: 0, y: 10 }}
@@ -260,12 +352,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            <h1 className="text-2xl font-bold mb-2">{getStepTitle()}</h1>
-            <p className="text-muted-foreground text-sm">{getStepDescription()}</p>
+            <h1 className="text-lg md:text-xl font-bold mb-1">{getStepTitle()}</h1>
+            <p className="text-muted-foreground text-xs md:text-sm">{getStepDescription()}</p>
           </motion.div>
         </div>
 
-        <form onSubmit={currentStep === 3 ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }} className="space-y-6 w-full" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <form onSubmit={currentStep === 4 ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }} className="space-y-6 w-full" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <AnimatePresence mode="wait">
             {/* Etapa 1: Cidade e Localidade */}
             {currentStep === 1 && (
@@ -412,6 +504,123 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 </div>
               </motion.div>
             )}
+
+            {/* Etapa 4: Notificações */}
+            {currentStep === 4 && (
+              <motion.div
+                key="step4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                {effectivePushSupported ? (
+                  <>
+                    <div className="text-center space-y-4">
+                      <div className="flex justify-center">
+                        {notificationActivated || isPushSubscribed ? (
+                          <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Bell className="h-10 w-10 text-primary" />
+                          </div>
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                            <BellOff className="h-10 w-10 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-base text-foreground mb-2">
+                          {notificationActivated || isPushSubscribed 
+                            ? '✅ Notificações ativadas!' 
+                            : 'Ative as notificações para receber avisos sobre:'}
+                        </p>
+                        {!(notificationActivated || isPushSubscribed) && (
+                          <ul className="text-sm text-muted-foreground space-y-1 text-left max-w-sm mx-auto">
+                            <li>• Ranking e posições</li>
+                            <li>• Resultados dos jogos</li>
+                            <li>• Início e fim de rodadas</li>
+                            <li>• Gols e atualizações</li>
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                    {!(notificationActivated || isPushSubscribed) && (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="lg"
+                        onClick={handleActivateNotifications}
+                        disabled={notificationLoading || pushLoading}
+                        className="w-full"
+                      >
+                        {notificationLoading || pushLoading ? (
+                          <>
+                            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                            Ativando...
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="h-4 w-4 mr-2" />
+                            Ativar Notificações
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center space-y-4">
+                    <div className="flex justify-center">
+                      <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                        <BellOff className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-base text-foreground mb-2">
+                        Notificações não estão disponíveis no seu navegador
+                      </p>
+                      {isMobile && !isPWA && (
+                        <div className="text-sm text-muted-foreground space-y-3 text-left max-w-sm mx-auto bg-secondary/50 p-4 rounded-lg">
+                          <p className="font-medium mb-3">💡 Instale como app para receber notificações:</p>
+                          <div className="space-y-4">
+                            <div>
+                              <p className="font-medium mb-1">📱 <strong>iPhone/iPad:</strong></p>
+                              <ol className="list-decimal list-inside space-y-1 ml-2 text-xs">
+                                <li>Toque no botão de compartilhar <span className="font-mono">□↑</span></li>
+                                <li>Selecione "Adicionar à Tela de Início"</li>
+                                <li>Abra o app da tela inicial</li>
+                              </ol>
+                            </div>
+                            <div>
+                              <p className="font-medium mb-1">🤖 <strong>Android:</strong></p>
+                              <ol className="list-decimal list-inside space-y-1 ml-2 text-xs">
+                                <li>Toque no menu <span className="font-mono">⋮</span> (três pontos)</li>
+                                <li>Selecione "Adicionar à tela inicial" ou "Instalar app"</li>
+                                <li>Confirme a instalação</li>
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {!isMobile && (
+                        <p className="text-sm text-muted-foreground">
+                          Use um navegador moderno ou instale como app no mobile para receber notificações
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={handleSubmit}
+                      className="w-full"
+                    >
+                      Continuar sem ativar
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {error && (
@@ -452,8 +661,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               size="lg"
               className="flex-1"
             >
-              {loading ? 'Salvando...' : currentStep === 3 ? 'Finalizar' : 'Continuar'}
-              {currentStep < 3 && <ArrowRight className="ml-2 h-5 w-5" />}
+              {loading ? 'Salvando...' : currentStep === 4 ? 'Finalizar' : 'Continuar'}
+              {currentStep < 4 && <ArrowRight className="ml-2 h-5 w-5" />}
             </Button>
           </div>
         </form>
