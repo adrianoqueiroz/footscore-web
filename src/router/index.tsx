@@ -4,7 +4,7 @@ import { authService } from '@/services/auth.service'
 import { User } from '@/types'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register' // Import the new Register component
-import Phone from '@/pages/Phone'
+import Onboarding from '@/pages/Onboarding'
 import Matches from '@/pages/Matches'
 import Predictions from '@/pages/Predictions'
 import Tickets from '@/pages/Tickets'
@@ -138,7 +138,7 @@ const PublicRoute = () => {
 
 const PrivateRoute = () => {
   const [user, setUser] = useState<User | null>(null)
-  const [needsPhone, setNeedsPhone] = useState(false)
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -147,7 +147,8 @@ const PrivateRoute = () => {
       const currentUser = authService.getCurrentUser()
       if (currentUser) {
         setUser(currentUser)
-        setNeedsPhone(!currentUser.phone)
+        // Verificar se precisa fazer onboarding (needsOnboarding === true)
+        setNeedsOnboarding(currentUser.needsOnboarding === true)
       }
       setLoading(false)
     }, 50)
@@ -155,11 +156,11 @@ const PrivateRoute = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  const handlePhoneComplete = () => {
+  const handleOnboardingComplete = () => {
     const currentUser = authService.getCurrentUser()
     if (currentUser) {
       setUser(currentUser)
-      setNeedsPhone(false)
+      setNeedsOnboarding(false)
     }
   }
 
@@ -171,8 +172,8 @@ const PrivateRoute = () => {
     return <Navigate to="/login" />
   }
 
-  if (needsPhone) {
-    return <Phone onComplete={handlePhoneComplete} />
+  if (needsOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />
   }
 
   return <MainLayout user={user} />

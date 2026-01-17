@@ -27,10 +27,65 @@ export default function AdminManageUsers() {
   const [newPassword, setNewPassword] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
+  const [editingCity, setEditingCity] = useState('')
+  const [editingLocation, setEditingLocation] = useState('')
+  const [showOtherLocation, setShowOtherLocation] = useState(false)
 
   useEffect(() => {
     loadUsers()
   }, [])
+
+  // Função para separar cidade e localidade do formato "Cidade - Localidade"
+  const parseCityAndLocation = (cityString: string) => {
+    if (!cityString) return { city: '', location: '' }
+    
+    const parts = cityString.split(' - ')
+    if (parts.length === 2) {
+      return { city: parts[0].trim(), location: parts[1].trim() }
+    }
+    // Se não tiver o formato esperado, assume que é só a cidade
+    return { city: cityString.trim(), location: '' }
+  }
+
+  // Separar cidade e localidade quando começar a editar
+  useEffect(() => {
+    if (editingUser) {
+      const { city: parsedCity, location: parsedLocation } = parseCityAndLocation(editingUser.city || '')
+      setEditingCity(parsedCity)
+      
+      // Verificar se a localidade é "Sede" ou outra
+      if (parsedLocation.toLowerCase() === 'sede') {
+        setEditingLocation('Sede')
+        setShowOtherLocation(false)
+      } else if (parsedLocation) {
+        setEditingLocation(parsedLocation)
+        setShowOtherLocation(true)
+      } else {
+        setEditingLocation('')
+        setShowOtherLocation(false)
+      }
+    } else {
+      setEditingCity('')
+      setEditingLocation('')
+      setShowOtherLocation(false)
+    }
+  }, [editingUser])
+
+  const handleLocationSelect = (value: string) => {
+    if (value === 'Sede') {
+      setEditingLocation('Sede')
+      setShowOtherLocation(false)
+    } else {
+      // "Outra" foi selecionada
+      setEditingLocation('')
+      setShowOtherLocation(true)
+      // Focar no input após um pequeno delay
+      setTimeout(() => {
+        const input = document.getElementById('admin-location-input')
+        input?.focus()
+      }, 100)
+    }
+  }
 
   const loadUsers = async () => {
     setLoading(true)
@@ -124,6 +179,9 @@ export default function AdminManageUsers() {
                 setEditingUser(null)
                 setOriginalUser(null)
                 setNewPassword('')
+                setEditingCity('')
+                setEditingLocation('')
+                setShowOtherLocation(false)
               }}
               className="rounded-full h-10 w-10 p-0 shrink-0"
             >
@@ -187,13 +245,66 @@ export default function AdminManageUsers() {
                   </div>
                   
                   <div>
+                    <label className="block text-sm font-medium mb-2 text-left">
+                      Cidade
+                    </label>
                     <Input
                       type="text"
-                      placeholder="Cidade (opcional)"
-                      value={editingUser.city || ''}
-                      onChange={(e) => setEditingUser({ ...editingUser, city: e.target.value })}
+                      placeholder="Ex: Brotas de Macaubas"
+                      value={editingCity}
+                      onChange={(e) => setEditingCity(e.target.value)}
                       disabled={savingStatus[`update-${user.id}`]}
                     />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-left">
+                      Localidade
+                    </label>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={editingLocation === 'Sede' ? 'primary' : 'outline'}
+                          onClick={() => handleLocationSelect('Sede')}
+                          className="w-full"
+                          disabled={savingStatus[`update-${user.id}`]}
+                        >
+                          Sede
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={showOtherLocation ? 'primary' : 'outline'}
+                          onClick={() => handleLocationSelect('Outra')}
+                          className="w-full"
+                          disabled={savingStatus[`update-${user.id}`]}
+                        >
+                          Outra
+                        </Button>
+                      </div>
+                      {showOtherLocation && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="w-full mt-3"
+                        >
+                          <Input
+                            id="admin-location-input"
+                            type="text"
+                            placeholder="Digite o distrito ou localidade"
+                            value={editingLocation}
+                            onChange={(e) => setEditingLocation(e.target.value)}
+                            className="w-full"
+                            disabled={savingStatus[`update-${user.id}`]}
+                            minLength={2}
+                          />
+                        </motion.div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 text-left">
+                      Selecione "Sede" ou informe outra localidade do município
+                    </p>
                   </div>
                   
                   <div>
@@ -226,6 +337,15 @@ export default function AdminManageUsers() {
                     </div>
                   )}
                   
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">Precisa fazer onboarding</span>
+                    <Switch
+                      checked={editingUser.needsOnboarding === true}
+                      onCheckedChange={(checked) => setEditingUser({ ...editingUser, needsOnboarding: checked })}
+                      disabled={savingStatus[`update-${user.id}`]}
+                    />
+                  </div>
+                  
                   <div className="pt-2 border-t border-border">
                     <label className="block text-xs font-medium text-muted-foreground mb-1">
                       Nova Senha (deixe em branco para não alterar)
@@ -244,11 +364,23 @@ export default function AdminManageUsers() {
                       <Button
                         variant="primary"
                         onClick={() => {
+                          // Combinar cidade e localidade no formato "Cidade - Localidade"
+                          let cityWithLocation: string | undefined
+                          if (editingCity.trim()) {
+                            if (editingLocation.trim().toLowerCase() === 'sede') {
+                              cityWithLocation = `${editingCity.trim()} - Sede`
+                            } else if (editingLocation.trim()) {
+                              cityWithLocation = `${editingCity.trim()} - ${editingLocation.trim()}`
+                            } else {
+                              cityWithLocation = editingCity.trim()
+                            }
+                          }
+
                           const updates: Partial<User> = {
                             name: editingUser.name,
                             email: editingUser.email,
                             phone: editingUser.phone || undefined,
-                            city: editingUser.city || undefined,
+                            city: cityWithLocation || undefined,
                             nickname: editingUser.nickname || undefined
                           }
 
@@ -258,6 +390,10 @@ export default function AdminManageUsers() {
 
                           if (originalUser && editingUser.superAdmin !== originalUser.superAdmin && currentUser?.superAdmin) {
                             updates.superAdmin = Boolean(editingUser.superAdmin)
+                          }
+
+                          if (originalUser && editingUser.needsOnboarding !== originalUser.needsOnboarding) {
+                            updates.needsOnboarding = Boolean(editingUser.needsOnboarding)
                           }
 
                           if (newPassword && newPassword.length > 0 && newPassword.length < 6) {

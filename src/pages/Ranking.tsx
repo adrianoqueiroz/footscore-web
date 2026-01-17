@@ -129,48 +129,12 @@ export default function Ranking() {
 
     try {
 
-      // Sempre buscar com hideNames=true primeiro (nomes mascarados)
+      // Buscar ranking com hideNames=true (nomes mascarados, exceto vencedor quando rodada finalizada)
+      // O backend já retorna o nome completo do vencedor (posição 1) quando a rodada está finalizada
       const rankingData = await ticketService.getRanking(selectedRound, true)
 
-      let processedData = rankingData
-
-      // Se a rodada está finalizada, mostrar nome completo apenas do primeiro lugar (vencedor)
-      if (useRoundFinished) {
-        // Buscar dados sem hideNames para ter nomes completos de todos
-        const fullData = await ticketService.getRanking(selectedRound, false)
-
-        // Combinar: primeiro lugar com nome completo, resto mascarado
-        const currentUser = authService.getCurrentUser()
-        processedData = rankingData.map(entry => {
-          if (entry.position === 1) {
-            // Encontrar nome completo no fullData apenas para o primeiro lugar
-            const fullEntry = fullData.find(e => e.userId === entry.userId && e.ticketId === entry.ticketId)
-            if (fullEntry) {
-              return {
-                ...entry,
-                userName: fullEntry.userName
-              }
-            }
-          }
-
-          // Para posições > 1 ou quando não encontrou no fullData
-          // Se não é o próprio usuário, verificar se nome está mascarado
-          const isOwnEntry = currentUser && entry.userId === currentUser.id
-          if (!isOwnEntry) {
-            const isNameMasked = entry.userName.includes('*')
-
-            // Se o nome está mascarado, manter como está
-            if (isNameMasked) {
-              return entry
-            }
-          }
-
-          return entry
-        })
-      }
-
       // Atualizar o ranking silenciosamente (sem mostrar loading)
-      setRanking(processedData)
+      setRanking(rankingData)
 
     } catch (error) {
       console.error('[Ranking] Erro ao atualizar ranking silenciosamente:', error)

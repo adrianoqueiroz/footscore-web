@@ -17,6 +17,7 @@ export interface User {
   favoriteTeam?: string | null
   isAdmin: boolean
   superAdmin?: boolean
+  needsOnboarding?: boolean
 }
 
 // New interfaces for authentication

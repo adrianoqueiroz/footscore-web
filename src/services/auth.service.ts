@@ -40,6 +40,8 @@ export const authService = {
       const response = await apiService.post<AuthResponse>('/auth/login', credentials);
       // Converter isAdmin de 1/0 para boolean se necessário
       response.user.isAdmin = Boolean(response.user.isAdmin === 1 || response.user.isAdmin === true)
+      // Converter needsOnboarding para boolean se necessário
+      response.user.needsOnboarding = Boolean(response.user.needsOnboarding !== false)
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response.user));
       return response;
@@ -55,6 +57,8 @@ export const authService = {
       const response = await apiService.post<AuthResponse>('/auth/register', userData);
       // Converter isAdmin de 1/0 para boolean se necessário
       response.user.isAdmin = Boolean(response.user.isAdmin === 1 || response.user.isAdmin === true)
+      // Converter needsOnboarding para boolean se necessário
+      response.user.needsOnboarding = Boolean(response.user.needsOnboarding !== false)
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response.user));
       return response;
@@ -80,12 +84,14 @@ export const authService = {
     }
   },
 
-  async updateProfile(updates: { name?: string; phone?: string; city?: string; nickname?: string; favoriteTeam?: string | null }): Promise<User> {
+  async updateProfile(updates: { name?: string; phone?: string; city?: string; nickname?: string; favoriteTeam?: string | null; needsOnboarding?: boolean }): Promise<User> {
     try {
       const response = await apiService.put<{ user: User }>('/auth/profile', updates)
       const updatedUser = response.user
       // Converter isAdmin de 1/0 para boolean se necessário
       updatedUser.isAdmin = Boolean(updatedUser.isAdmin === 1 || updatedUser.isAdmin === true)
+      // Converter needsOnboarding para boolean se necessário
+      updatedUser.needsOnboarding = Boolean(updatedUser.needsOnboarding !== false)
       
       // Atualizar localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser))
@@ -196,6 +202,8 @@ export const authService = {
       const user = response.user
       // Converter isAdmin de 1/0 para boolean se necessário
       user.isAdmin = Boolean(user.isAdmin === 1 || user.isAdmin === true)
+      // Converter needsOnboarding para boolean se necessário
+      user.needsOnboarding = Boolean(user.needsOnboarding !== false)
       
       // Atualizar localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
@@ -215,6 +223,8 @@ export const authService = {
       const user = JSON.parse(userStr) as User
       // Converter isAdmin de 1/0 para boolean se necessário (pode estar salvo como número)
       user.isAdmin = Boolean(user.isAdmin === 1 || user.isAdmin === true)
+      // Converter needsOnboarding para boolean se necessário
+      user.needsOnboarding = Boolean(user.needsOnboarding !== false)
       return user
     } catch (error) {
       console.error("Error parsing user data from localStorage:", error)

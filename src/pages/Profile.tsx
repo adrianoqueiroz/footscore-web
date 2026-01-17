@@ -32,17 +32,47 @@ export default function Profile() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
+  const [location, setLocation] = useState('')
+  const [showOtherLocation, setShowOtherLocation] = useState(false)
   const [nickname, setNickname] = useState('')
   const [favoriteTeam, setFavoriteTeam] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+
+  // Função para separar cidade e localidade do formato "Cidade - Localidade"
+  const parseCityAndLocation = (cityString: string) => {
+    if (!cityString) return { city: '', location: '' }
+    
+    const parts = cityString.split(' - ')
+    if (parts.length === 2) {
+      return { city: parts[0].trim(), location: parts[1].trim() }
+    }
+    // Se não tiver o formato esperado, assume que é só a cidade
+    return { city: cityString.trim(), location: '' }
+  }
 
   useEffect(() => {
     if (user && !isEditing && !isSaving) {
       // Só atualizar quando não estiver editando e não estiver salvando para não sobrescrever mudanças do usuário
       setName(user.name || '')
       setPhone(user.phone || '')
-      setCity(user.city || '')
+      
+      // Separar cidade e localidade
+      const { city: parsedCity, location: parsedLocation } = parseCityAndLocation(user.city || '')
+      setCity(parsedCity)
+      
+      // Verificar se a localidade é "Sede" ou outra
+      if (parsedLocation.toLowerCase() === 'sede') {
+        setLocation('Sede')
+        setShowOtherLocation(false)
+      } else if (parsedLocation) {
+        setLocation(parsedLocation)
+        setShowOtherLocation(true)
+      } else {
+        setLocation('')
+        setShowOtherLocation(false)
+      }
+      
       setNickname(user.nickname || '')
       const teamValue = user.favoriteTeam || ''
       console.log('[Profile] useEffect - carregando favoriteTeam do user:', teamValue, 'isEditing:', isEditing, 'isSaving:', isSaving)
@@ -65,6 +95,22 @@ export default function Profile() {
       .replace(/(-\d{4})\d+?$/, '$1')
   }
 
+  const handleLocationSelect = (value: string) => {
+    if (value === 'Sede') {
+      setLocation('Sede')
+      setShowOtherLocation(false)
+    } else {
+      // "Outra" foi selecionada
+      setLocation('')
+      setShowOtherLocation(true)
+      // Focar no input após um pequeno delay
+      setTimeout(() => {
+        const input = document.getElementById('location-input')
+        input?.focus()
+      }, 100)
+    }
+  }
+
   const handleSave = async () => {
     if (!user) return
 
@@ -84,14 +130,33 @@ export default function Profile() {
       return
     }
 
+    // Localidade é sempre obrigatória
+    if (!location.trim()) {
+      toast.error('Por favor, selecione "Sede" ou informe outra localidade')
+      return
+    }
+    // Se selecionou "Outra", precisa preencher o nome
+    if (showOtherLocation && location.trim().length < 2) {
+      toast.error('Por favor, informe o nome da localidade')
+      return
+    }
+
     setLoading(true)
     setIsSaving(true) // Marcar que está salvando para evitar que useEffect resete
     try {
+      // Combinar cidade e localidade no formato "Cidade - Localidade"
+      let cityWithLocation: string
+      if (location.trim().toLowerCase() === 'sede') {
+        cityWithLocation = `${city.trim()} - Sede`
+      } else {
+        cityWithLocation = `${city.trim()} - ${location.trim()}`
+      }
+
       console.log('[Profile] Salvando perfil - favoriteTeam antes de enviar:', favoriteTeam, 'tipo:', typeof favoriteTeam)
       const profileData = {
         name: name.trim(),
         phone: phoneNumbers || undefined,
-        city: city.trim(),
+        city: cityWithLocation,
         nickname: nickname.trim() || undefined,
         favoriteTeam: favoriteTeam && favoriteTeam.trim() !== '' ? favoriteTeam.trim() : null, // Enviar null se vazio
       }
@@ -104,7 +169,21 @@ export default function Profile() {
         // Atualizar os campos individuais primeiro
         setName(updatedUser.name)
         setPhone(updatedUser.phone || '')
-        setCity(updatedUser.city)
+        
+        // Separar cidade e localidade
+        const { city: parsedCity, location: parsedLocation } = parseCityAndLocation(updatedUser.city || '')
+        setCity(parsedCity)
+        if (parsedLocation.toLowerCase() === 'sede') {
+          setLocation('Sede')
+          setShowOtherLocation(false)
+        } else if (parsedLocation) {
+          setLocation(parsedLocation)
+          setShowOtherLocation(true)
+        } else {
+          setLocation('')
+          setShowOtherLocation(false)
+        }
+        
         setNickname(updatedUser.nickname || '')
         const teamValue = updatedUser.favoriteTeam || ''
         console.log('[Profile] Setando favoriteTeam no estado:', teamValue)
@@ -239,23 +318,78 @@ export default function Profile() {
             </div>
 
             {/* Cidade */}
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center mt-1">
                 <MapPin className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 space-y-2">
                 {isEditing ? (
-                  <Input
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Sua cidade"
-                    className="w-full"
-                    required
-                  />
+                  <>
+                    <div>
+                      <label htmlFor="city" className="block text-sm font-medium mb-2 text-left">
+                        Cidade *
+                      </label>
+                      <Input
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Ex: Brotas de Macaubas"
+                        className="w-full"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="location" className="block text-sm font-medium mb-2 text-left">
+                        Localidade *
+                      </label>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={location === 'Sede' ? 'primary' : 'outline'}
+                            onClick={() => handleLocationSelect('Sede')}
+                            className="w-full"
+                          >
+                            Sede
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={showOtherLocation ? 'primary' : 'outline'}
+                            onClick={() => handleLocationSelect('Outra')}
+                            className="w-full"
+                          >
+                            Outra
+                          </Button>
+                        </div>
+                        {showOtherLocation && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="w-full mt-3"
+                          >
+                            <Input
+                              id="location-input"
+                              type="text"
+                              placeholder="Digite o distrito ou localidade"
+                              value={location}
+                              onChange={(e) => setLocation(e.target.value)}
+                              className="w-full"
+                              required
+                              minLength={2}
+                            />
+                          </motion.div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 text-left">
+                        Selecione "Sede" ou informe outra localidade do município
+                      </p>
+                    </div>
+                  </>
                 ) : (
                   <div>
                     <p className="text-sm text-muted-foreground">Cidade</p>
-                    <p className="text-base font-semibold">{city}</p>
+                    <p className="text-base font-semibold">{city}{location ? ` - ${location}` : ''}</p>
                   </div>
                 )}
               </div>
@@ -340,7 +474,18 @@ export default function Profile() {
                   if (user) {
                     setName(user.name || '')
                     setPhone(user.phone || '')
-                    setCity(user.city || '')
+                    const { city: parsedCity, location: parsedLocation } = parseCityAndLocation(user.city || '')
+                    setCity(parsedCity)
+                    if (parsedLocation.toLowerCase() === 'sede') {
+                      setLocation('Sede')
+                      setShowOtherLocation(false)
+                    } else if (parsedLocation) {
+                      setLocation(parsedLocation)
+                      setShowOtherLocation(true)
+                    } else {
+                      setLocation('')
+                      setShowOtherLocation(false)
+                    }
                     setNickname(user.nickname || '')
                     setFavoriteTeam(user.favoriteTeam || '')
                   }

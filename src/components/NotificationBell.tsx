@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, X, CheckCheck } from 'lucide-react'
+import { Bell, Trash2, CheckCheck } from 'lucide-react'
 import { useNotifications, NotificationItem } from '@/contexts/NotificationContext'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -42,7 +42,7 @@ export default function NotificationBell() {
   }, [isOpen])
 
 
-  // Marcar todas como lidas ao abrir o dropdown
+  // Marcar todas como lidas ao abrir o dropdown (apenas visualmente, não remove)
   useEffect(() => {
     if (isOpen && unreadCount > 0) {
       markAllAsRead()
@@ -158,10 +158,15 @@ export default function NotificationBell() {
               {/* Header */}
               <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} border-b border-border`}>
                 <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-sm'}`}>Notificações</h3>
-                {notifications.length > 0 && (
+                {sortedNotifications.length > 0 && (
                   <button
                     onClick={() => {
-                      markAllAsRead()
+                      // Remover todas as notificações ao invés de apenas marcar como lidas
+                      // Criar uma cópia do array para evitar problemas durante a iteração
+                      const notificationsToRemove = [...sortedNotifications]
+                      notificationsToRemove.forEach(notification => {
+                        removeNotification(notification.id)
+                      })
                     }}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                   >
@@ -189,13 +194,16 @@ export default function NotificationBell() {
                           !notification.read ? 'bg-primary/5' : ''
                         }`}
                       >
-                        {/* Botão X no canto superior direito */}
+                        {/* Botão de lixeira no canto superior direito */}
                         <button
-                          onClick={() => removeNotification(notification.id)}
-                          className="absolute top-2 right-2 p-1.5 hover:bg-secondary/80 rounded-md transition-colors opacity-70 hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeNotification(notification.id)
+                          }}
+                          className="absolute top-2.5 right-2.5 p-1.5 hover:bg-destructive/20 rounded-md transition-colors opacity-60 hover:opacity-100 flex items-center justify-center group"
                           aria-label="Remover notificação"
                         >
-                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
                         </button>
 
                         <div className="flex items-start gap-3 pr-6">
