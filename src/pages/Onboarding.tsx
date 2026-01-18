@@ -261,12 +261,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         style={{ flex: '1 1 auto', minHeight: 0 }}
       >
         {/* Header com Logo e Bem-vindo */}
-        <div className="text-center mb-3 md:mb-4 flex-shrink-0">
+        <div className="text-center mb-6 md:mb-8 flex-shrink-0">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-            className="mb-2 md:mb-3"
+            className="mb-3 md:mb-4"
           >
             <Logo size="md" showStars={true} animateStars={true} />
           </motion.div>
@@ -274,7 +274,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-lg md:text-xl font-semibold text-foreground mb-0.5 md:mb-1"
+            className="text-lg md:text-xl font-semibold text-foreground mb-1 md:mb-2"
           >
             Bem-vindo!
           </motion.h2>
@@ -289,8 +289,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </div>
 
         {/* Indicador de progresso */}
-        <div className="mb-4 w-full flex-shrink-0">
-          <div className="flex items-center justify-center mb-3 gap-1 md:gap-2 overflow-x-auto pb-2 pt-1 -mx-2 px-2">
+        <div className="mb-6 md:mb-8 w-full flex-shrink-0">
+          <div className="flex items-center justify-center mb-4 gap-1 md:gap-2 overflow-x-auto pb-2 pt-2 -mx-2 px-2">
             {steps.map((step, index) => {
               const StepIcon = step.icon
               const isActive = currentStep === step.number
@@ -344,7 +344,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </div>
 
         {/* Conteúdo do formulário */}
-        <div className="text-center mb-4 md:mb-6 flex-shrink-0">
+        <div className="text-center mb-6 md:mb-8 flex-shrink-0">
           <motion.div
             key={currentStep}
             initial={{ opacity: 0, y: 10 }}
@@ -352,12 +352,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            <h1 className="text-lg md:text-xl font-bold mb-1">{getStepTitle()}</h1>
+            <h1 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{getStepTitle()}</h1>
             <p className="text-muted-foreground text-xs md:text-sm">{getStepDescription()}</p>
           </motion.div>
         </div>
 
-        <form onSubmit={currentStep === 4 ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }} className="space-y-6 w-full" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <form onSubmit={currentStep === 4 ? handleSubmit : (e) => { e.preventDefault(); handleNext(); }} className="space-y-4 md:space-y-6 w-full" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <AnimatePresence mode="wait">
             {/* Etapa 1: Cidade e Localidade */}
             {currentStep === 1 && (
@@ -367,10 +367,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-4"
+                className="space-y-5"
               >
                 <div>
-                  <label htmlFor="city" className="block text-sm font-medium mb-2 text-left">
+                  <label htmlFor="city" className="block text-sm font-medium mb-2.5 text-left">
                     Cidade *
                   </label>
                   <div className="relative w-full">
@@ -390,7 +390,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
                 {/* Campo de localidade - sempre obrigatório */}
                 <div>
-                  <label htmlFor="location" className="block text-sm font-medium mb-2 text-left">
+                  <label htmlFor="location" className="block text-sm font-medium mb-2.5 text-left">
                     Localidade *
                   </label>
                   <div className="space-y-2 w-full">
@@ -448,9 +448,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
+                className="space-y-5"
               >
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium mb-2 text-left">
+                  <label htmlFor="phone" className="block text-sm font-medium mb-2.5 text-left">
                     WhatsApp *
                   </label>
                   <div className="relative w-full">
@@ -483,7 +484,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 transition={{ duration: 0.3 }}
               >
                 <div>
-                  <label htmlFor="nickname" className="block text-sm font-medium mb-2 text-left">
+                  <label htmlFor="nickname" className="block text-sm font-medium mb-2.5 text-left">
                     Apelido <span className="text-muted-foreground font-normal">(opcional)</span>
                   </label>
                   <div className="relative w-full">
@@ -529,21 +530,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <p className="text-base text-foreground mb-2">
-                          {notificationActivated || isPushSubscribed 
-                            ? '✅ Notificações ativadas!' 
-                            : 'Ative as notificações para receber avisos sobre:'}
+                      {notificationActivated || isPushSubscribed ? (
+                        <p className="text-base text-foreground">
+                          ✅ Notificações ativadas!
                         </p>
-                        {!(notificationActivated || isPushSubscribed) && (
-                          <ul className="text-sm text-muted-foreground space-y-1 text-left max-w-sm mx-auto">
-                            <li>• Ranking e posições</li>
-                            <li>• Resultados dos jogos</li>
-                            <li>• Início e fim de rodadas</li>
-                            <li>• Gols e atualizações</li>
-                          </ul>
-                        )}
-                      </div>
+                      ) : null}
                     </div>
                     {!(notificationActivated || isPushSubscribed) && (
                       <Button
@@ -634,11 +625,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           )}
 
           {/* Botões de navegação */}
-          <div className="flex gap-3 pt-4 flex-shrink-0">
+          <div className="flex gap-3 pt-6 md:pt-8 flex-shrink-0 mt-auto">
             {currentStep > 1 && (
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 onClick={handleBack}
                 disabled={loading}
                 className="flex-1"

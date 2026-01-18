@@ -11,7 +11,7 @@ import { useToastContext } from '@/contexts/ToastContext'
 
 export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false) // Renamed for clarity
-  const [identifier, setIdentifier] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
@@ -54,7 +54,7 @@ export default function Login() {
     e.preventDefault();
     setFormLoading(true);
     try {
-      await authService.login({ identifier, password });
+      await authService.login({ email, password });
       navigate('/');
     } catch (error: any) {
       console.error('Login error:', error);
@@ -124,11 +124,11 @@ export default function Login() {
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <Input
-              id="identifier"
-              type="text"
-              placeholder="Email ou Telefone"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               disabled={formLoading}
             />

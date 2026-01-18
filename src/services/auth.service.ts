@@ -37,7 +37,11 @@ export const authService = {
   // New login function
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await apiService.post<AuthResponse>('/auth/login', credentials);
+      // Enviar apenas email (identifier será tratado como email no backend)
+      const response = await apiService.post<AuthResponse>('/auth/login', {
+        identifier: credentials.email,
+        password: credentials.password
+      });
       // Converter isAdmin de 1/0 para boolean se necessário
       response.user.isAdmin = Boolean(response.user.isAdmin === 1 || response.user.isAdmin === true)
       // Converter needsOnboarding para boolean se necessário

@@ -22,16 +22,13 @@ export interface User {
 
 // New interfaces for authentication
 export interface LoginRequest {
-  emailOrPhone: string; // Can be email or phone
+  email: string; // Only email, no phone
   password: string;
 }
 
 export interface RegisterRequest {
   name: string;
   email: string;
-  phone?: string; // Optional as per backend prompt
-  city: string;
-  nickname?: string;
   password: string;
 }
 

@@ -153,17 +153,22 @@ export default function AdminManageUsers() {
     }
   }
 
+  // Ordenar usuários alfabeticamente por nome
+  const sortedUsers = [...users].sort((a, b) => {
+    const nameA = a.name.toLowerCase().trim()
+    const nameB = b.name.toLowerCase().trim()
+    return nameA.localeCompare(nameB, 'pt-BR')
+  })
+
   const filteredUsers = searchTerm.trim() 
-    ? users.filter(user => {
+    ? sortedUsers.filter(user => {
         const searchLower = searchTerm.toLowerCase()
         return (
           user.name.toLowerCase().includes(searchLower) ||
-          user.email.toLowerCase().includes(searchLower) ||
-          (user.phone && user.phone.includes(searchTerm)) ||
-          (user.nickname && user.nickname.toLowerCase().includes(searchLower))
+          user.email.toLowerCase().includes(searchLower)
         )
       })
-    : users
+    : sortedUsers
 
   // Se estiver editando, mostrar apenas o formulário de edição
   if (editingUser) {
@@ -458,7 +463,7 @@ export default function AdminManageUsers() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar usuários por nome, email ou telefone..."
+              placeholder="Buscar por nome ou email..."
               className="pl-9"
             />
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

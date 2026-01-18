@@ -13,9 +13,6 @@ import iconImage from '@/assets/icon.jpg'
 export default function Register() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [city, setCity] = useState('')
-  const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -27,7 +24,7 @@ export default function Register() {
     setPasswordError(null)
     setLoading(true)
     try {
-      await authService.register({ name, email, phone: phone || undefined, city, nickname: nickname || undefined, password })
+      await authService.register({ name, email, password })
       navigate('/') // Redirect to home or login page after successful registration
     } catch (error: any) {
       console.error('Registration error:', error)
@@ -108,31 +105,6 @@ export default function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={loading}
-            />
-            <Input
-              id="phone"
-              type="tel" // Use type="tel" for phone numbers
-              placeholder="Telefone (opcional)"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={loading}
-            />
-            <Input
-              id="city"
-              type="text"
-              placeholder="Cidade *"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              required
-              disabled={loading}
-            />
-            <Input
-              id="nickname"
-              type="text"
-              placeholder="Apelido (opcional)"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
               disabled={loading}
             />
             <div className="space-y-2">
