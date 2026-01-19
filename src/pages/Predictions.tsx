@@ -1404,7 +1404,7 @@ export default function Predictions() {
                 size="md"
                 onClick={handlePrevious}
                 disabled={currentIndex === 0 || isLocked}
-                className="flex-1 opacity-70 hover:opacity-100 transition-opacity text-xs sm:text-sm h-9 sm:h-10 md:h-11"
+                className="flex-1 opacity-70 hover:opacity-100 transition-opacity text-sm sm:text-base h-9 sm:h-10 md:h-11"
               >
                 <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
                 <span>Anterior</span>
@@ -1416,7 +1416,7 @@ export default function Predictions() {
                   size="md"
                   onClick={handleShowPreview}
                   disabled={isLocked}
-                  className="flex-1 text-xs sm:text-sm h-9 sm:h-10 md:h-11"
+                  className="flex-1 text-sm sm:text-base h-9 sm:h-10 md:h-11"
                 >
                   <Eye className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-0.5 sm:mr-1" />
                   Revisar
@@ -1427,7 +1427,7 @@ export default function Predictions() {
                   size="md"
                   onClick={handleNext}
                   disabled={isLocked}
-                  className="flex-1 text-xs sm:text-sm h-9 sm:h-10 md:h-11"
+                  className="flex-1 text-sm sm:text-base h-9 sm:h-10 md:h-11"
                 >
                   Próximo
                   <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 ml-0.5 sm:ml-1" />
