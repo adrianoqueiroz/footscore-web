@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Lock, ChevronLeft, ChevronRight, Eye, Info, X, Plus, Minus, ArrowLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Button from '@/components/ui/Button'
@@ -24,6 +24,7 @@ type ViewMode = 'cards' | 'preview'
 
 export default function Predictions() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [matches, setMatches] = useState<Match[]>([])
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({})
@@ -46,6 +47,87 @@ export default function Predictions() {
   const triggerHaptic = useHapticFeedback()
   const [showScoreHint, setShowScoreHint] = useState<Record<string, 'home' | 'away' | null>>({})
 
+  // Verificar se há mudanças não salvas (palpites preenchidos)
+  const hasUnsavedChanges = useCallback(() => {
+    // Se está editando um ticket existente, sempre considerar que pode ter mudanças
+    if (editingTicketId) {
+      const predictionsArray = Object.values(predictions)
+      return predictionsArray.some(p => p.homeScore > 0 || p.awayScore > 0)
+    }
+    
+    // Se não está editando, verificar se há algum palpite preenchido
+    const predictionsArray = Object.values(predictions)
+    return predictionsArray.some(p => p.homeScore > 0 || p.awayScore > 0)
+  }, [predictions, editingTicketId])
+
+  // Handler para verificar antes de navegar
+  const handleBeforeNavigate = useCallback(async (): Promise<boolean> => {
+    if (!hasUnsavedChanges()) {
+      return true
+    }
+
+    const confirmed = await confirm.confirm({
+      title: 'Atenção',
+      message: 'Você tem palpites não confirmados.\n\nDeseja realmente sair? Todo o progresso será perdido.',
+      confirmText: 'Sair',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+    })
+
+    return confirmed
+  }, [hasUnsavedChanges, confirm])
+
+  // Interceptar beforeunload (fechar aba/navegador)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault()
+        e.returnValue = 'Você tem palpites não confirmados. Deseja realmente sair?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [hasUnsavedChanges])
+
+  // Handler para botão voltar
+  const handleGoBack = useCallback(async () => {
+    if (await handleBeforeNavigate()) {
+      navigate(-1)
+    }
+  }, [handleBeforeNavigate, navigate])
+
+  // Interceptar navegação do menu (BottomNav) usando evento customizado
+  useEffect(() => {
+    const handleNavigationAttempt = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ 
+        path: string
+        resolve: (allowed: boolean) => void
+      }>
+      
+      if (!customEvent.detail?.resolve) {
+        // Se não tem resolve, não é nosso evento ou já foi processado
+        return
+      }
+      
+      // Só interceptar se estamos na página de Predictions e há mudanças não salvas
+      if (location.pathname === '/games' && hasUnsavedChanges()) {
+        const canNavigate = await handleBeforeNavigate()
+        customEvent.detail.resolve(canNavigate)
+      } else {
+        // Sem mudanças ou não estamos na página de Predictions, permitir navegação
+        customEvent.detail.resolve(true)
+      }
+    }
+
+    window.addEventListener('navigation-attempt' as any, handleNavigationAttempt)
+    return () => {
+      window.removeEventListener('navigation-attempt' as any, handleNavigationAttempt)
+    }
+  }, [hasUnsavedChanges, handleBeforeNavigate, location.pathname])
 
   // Ler parâmetros da URL
   useEffect(() => {
@@ -562,7 +644,7 @@ export default function Predictions() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(-1)}
+              onClick={handleGoBack}
               className="rounded-full h-10 w-10 p-0 shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -728,13 +810,13 @@ export default function Predictions() {
   // Renderizar cards deslizantes
   return (
     <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07] overflow-x-hidden relative min-h-0 select-none">
-      <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+      <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-2 sm:space-y-3 md:space-y-4 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 md:mb-4">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={handleGoBack}
             className="rounded-full h-10 w-10 p-0 shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -751,15 +833,15 @@ export default function Predictions() {
         ) : matches.length > 0 ? (
           <Card className={`p-0 relative overflow-hidden ${getMatchCardClasses()}`}>
             {/* Header */}
-            <div className="px-4 pt-3 pb-2 border-b border-border/30">
+            <div className="px-3 sm:px-4 pt-2 sm:pt-2.5 md:pt-3 pb-1.5 sm:pb-2 border-b border-border/30">
               <div className="flex items-center justify-center">
                 {currentMatch && (
-                  <span className="text-base font-semibold text-foreground">
+                  <span className="text-sm sm:text-base font-semibold text-foreground">
                     {format(new Date(`${currentMatch.date}T${currentMatch.time}`), "EEE, dd/MM 'às' HH:mm", { locale: ptBR })}
                   </span>
                 )}
                 {!currentMatch && (
-                  <span className="text-base font-semibold text-foreground">
+                  <span className="text-sm sm:text-base font-semibold text-foreground">
                     Confrontos
                   </span>
                 )}
@@ -767,7 +849,7 @@ export default function Predictions() {
             </div>
             <div 
               ref={carouselContainerRef} 
-              className="relative overflow-hidden pt-3 pb-1"
+              className="relative overflow-hidden pt-1.5 sm:pt-2 md:pt-3 pb-0.5 sm:pb-1"
               style={{ touchAction: isDraggingHorizontally ? 'pan-x' : 'pan-y pinch-zoom' }}
             >
               <motion.div
@@ -831,24 +913,45 @@ export default function Predictions() {
                   return (
                     <div
                       key={match.id}
-                      className="flex-shrink-0 p-4"
+                      className="flex-shrink-0 p-2 sm:p-3 md:p-4"
                       style={{ 
                         width: carouselWidth > 0 ? carouselWidth : '100%',
                         minWidth: carouselWidth > 0 ? carouselWidth : '100%',
                       }}
                     >
-                      <div className="flex flex-col items-center gap-2 w-full">
-                        <div className="flex items-center gap-2 w-full relative z-30 px-2">
-                          <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
-                            <span className="text-xs font-medium text-muted-foreground">Casa</span>
-                            <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="xl" className="h-20 w-20" noCircle />
-                            <span className="text-sm font-semibold text-center break-words leading-tight px-1">{match.homeTeam}</span>
+                      <div className="flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 w-full">
+                        <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 w-full relative z-30 px-0.5 sm:px-1 md:px-2">
+                          <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-1.5 min-w-0 max-w-[40%]">
+                            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">Casa</span>
+                            <TeamLogo 
+                              teamName={match.homeTeam} 
+                              logo={match.homeTeamLogo} 
+                              size="xl" 
+                              className="aspect-square" 
+                              noCircle
+                              style={{
+                                width: 'clamp(2rem, 8vw, 4rem)',
+                                height: 'clamp(2rem, 8vw, 4rem)',
+                                minWidth: '2rem',
+                                minHeight: '2rem',
+                                maxWidth: '4rem',
+                                maxHeight: '4rem'
+                              }}
+                            />
+                            <span 
+                              className="font-semibold text-center break-words leading-tight px-1"
+                              style={{ fontSize: 'clamp(0.75rem, 4vw, 1.25rem)' }}
+                            >{match.homeTeam}</span>
                           </div>
                           
-                          <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
-                            <div className="flex items-center gap-2">
+                          <div className="flex flex-col items-center gap-0.5 sm:gap-1 flex-shrink-0 px-0.5 sm:px-1 md:px-2">
+                            <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2">
                               <div 
-                                className="text-4xl font-bold text-foreground w-12 text-center tabular-nums relative cursor-pointer hover:opacity-70 transition-opacity"
+                                className="font-bold text-foreground text-center tabular-nums relative cursor-pointer hover:opacity-70 transition-opacity"
+                                style={{
+                                  fontSize: 'clamp(1.5rem, 8vw, 2.25rem)',
+                                  width: 'clamp(2rem, 10vw, 3rem)'
+                                }}
                                 onClick={() => {
                                   setShowScoreHint(prev => {
                                     // Se já está ativo, para a animação
@@ -875,9 +978,16 @@ export default function Predictions() {
                                   </motion.span>
                                 </AnimatePresence>
                               </div>
-                              <span className="text-3xl font-bold text-muted-foreground">×</span>
+                              <span 
+                                className="font-bold text-muted-foreground"
+                                style={{ fontSize: 'clamp(1.25rem, 6vw, 1.875rem)' }}
+                              >×</span>
                               <div 
-                                className="text-4xl font-bold text-foreground w-12 text-center tabular-nums relative cursor-pointer hover:opacity-70 transition-opacity"
+                                className="font-bold text-foreground text-center tabular-nums relative cursor-pointer hover:opacity-70 transition-opacity"
+                                style={{
+                                  fontSize: 'clamp(1.5rem, 8vw, 2.25rem)',
+                                  width: 'clamp(2rem, 10vw, 3rem)'
+                                }}
                                 onClick={() => {
                                   setShowScoreHint(prev => {
                                     // Se já está ativo, para a animação
@@ -907,10 +1017,27 @@ export default function Predictions() {
                             </div>
                           </div>
                           
-                          <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
-                            <span className="text-xs font-medium text-muted-foreground">Visitante</span>
-                            <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="xl" className="h-20 w-20" noCircle />
-                            <span className="text-sm font-semibold text-center break-words leading-tight px-1">{match.awayTeam}</span>
+                          <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-1.5 min-w-0 max-w-[40%]">
+                            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">Visitante</span>
+                            <TeamLogo 
+                              teamName={match.awayTeam} 
+                              logo={match.awayTeamLogo} 
+                              size="xl" 
+                              className="aspect-square" 
+                              noCircle
+                              style={{
+                                width: 'clamp(2rem, 8vw, 4rem)',
+                                height: 'clamp(2rem, 8vw, 4rem)',
+                                minWidth: '2rem',
+                                minHeight: '2rem',
+                                maxWidth: '4rem',
+                                maxHeight: '4rem'
+                              }}
+                            />
+                            <span 
+                              className="font-semibold text-center break-words leading-tight px-1"
+                              style={{ fontSize: 'clamp(0.75rem, 4vw, 1.25rem)' }}
+                            >{match.awayTeam}</span>
                           </div>
                         </div>
                       </div>
@@ -921,8 +1048,8 @@ export default function Predictions() {
             </div>
             
             {/* Barra de progresso */}
-            <div className="w-full px-4 pt-2 pb-2 border-t border-border/30">
-              <div className="w-full h-1 bg-secondary rounded-full overflow-hidden mb-2">
+            <div className="w-full px-3 sm:px-4 pt-1 sm:pt-1.5 md:pt-2 pb-1 sm:pb-1.5 md:pb-2 border-t border-border/30">
+              <div className="w-full h-0.5 sm:h-1 bg-secondary rounded-full overflow-hidden mb-0.5 sm:mb-1 md:mb-2">
                 <motion.div
                   className="h-full bg-primary rounded-full"
                   initial={{ width: '0%' }}
@@ -930,7 +1057,7 @@ export default function Predictions() {
                   transition={{ duration: 0.3, ease: 'easeOut' }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
                 {matches.length > 0 ? `Jogo ${currentIndex + 1} de ${matches.length}` : ''}
               </p>
             </div>
@@ -940,21 +1067,21 @@ export default function Predictions() {
         {/* Card de seleção de placar */}
         {currentMatch && currentPrediction && (
           <Card className="p-0 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
-            <div className="px-4 pt-3 pb-2 border-b border-border/30">
+            <div className="px-3 sm:px-4 pt-1.5 sm:pt-2 md:pt-2.5 pb-1 sm:pb-1.5 border-b border-border/30">
               <div className="flex items-center justify-center">
-                <span className="text-base font-semibold text-foreground">
+                <span className="text-sm sm:text-base font-semibold text-foreground">
                   Escolher Placar
                 </span>
               </div>
             </div>
-            <div 
-              className="flex items-center justify-center gap-2 w-full p-4" 
+                    <div 
+              className="flex items-center justify-center gap-1 sm:gap-2 w-full p-1.5 sm:p-2 md:p-3 lg:p-4" 
               style={{ touchAction: isButtonPressed ? 'none' : 'pan-y pinch-zoom' }}
             >
                   {/* Controles Casa */}
-                  <div className="flex-1 flex flex-col items-center gap-3">
+                  <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 min-w-0">
                     <span className="text-xs font-medium text-muted-foreground">Casa</span>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 justify-center w-full max-w-full">
                       <motion.div 
                         whileTap={{ scale: 0.9 }} 
                         transition={{ duration: 0.05 }}
@@ -1013,9 +1140,17 @@ export default function Predictions() {
                             })
                           }}
                           disabled={isLocked || currentPrediction.homeScore === 0}
-                          className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                          style={{
+                            width: 'clamp(3.5rem, 20vw, 5rem)',
+                            height: 'clamp(3.5rem, 20vw, 5rem)',
+                            minWidth: '3.5rem',
+                            minHeight: '3.5rem',
+                            maxWidth: '5rem',
+                            maxHeight: '5rem'
+                          }}
                         >
-                          <Minus className="h-9 w-9" />
+                          <Minus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                         </Button>
                       </motion.div>
                       <motion.div 
@@ -1076,21 +1211,29 @@ export default function Predictions() {
                             })
                           }}
                           disabled={isLocked || currentPrediction.homeScore === 10}
-                          className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                          style={{
+                            width: 'clamp(3.5rem, 20vw, 5rem)',
+                            height: 'clamp(3.5rem, 20vw, 5rem)',
+                            minWidth: '3.5rem',
+                            minHeight: '3.5rem',
+                            maxWidth: '5rem',
+                            maxHeight: '5rem'
+                          }}
                         >
-                          <Plus className="h-9 w-9" />
+                          <Plus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                         </Button>
                       </motion.div>
                     </div>
                   </div>
                   
                   {/* Separador visual vertical */}
-                  <div className="h-24 w-px bg-border/60 flex-shrink-0" />
+                  <div className="h-14 sm:h-18 md:h-22 lg:h-24 w-px bg-border/60 flex-shrink-0 mx-0.5 sm:mx-1 md:mx-2" />
                   
                   {/* Controles Visitante */}
-                  <div className="flex-1 flex flex-col items-center gap-3">
+                  <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 min-w-0">
                     <span className="text-xs font-medium text-muted-foreground">Visitante</span>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 justify-center w-full max-w-full">
                       <motion.div 
                         whileTap={{ scale: 0.9 }} 
                         transition={{ duration: 0.05 }}
@@ -1149,9 +1292,17 @@ export default function Predictions() {
                             })
                           }}
                           disabled={isLocked || currentPrediction.awayScore === 0}
-                          className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                          style={{
+                            width: 'clamp(3.5rem, 20vw, 5rem)',
+                            height: 'clamp(3.5rem, 20vw, 5rem)',
+                            minWidth: '3.5rem',
+                            minHeight: '3.5rem',
+                            maxWidth: '5rem',
+                            maxHeight: '5rem'
+                          }}
                         >
-                          <Minus className="h-9 w-9" />
+                          <Minus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                         </Button>
                       </motion.div>
                       <motion.div 
@@ -1212,9 +1363,17 @@ export default function Predictions() {
                             })
                           }}
                           disabled={isLocked || currentPrediction.awayScore === 10}
-                          className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                          style={{
+                            width: 'clamp(3.5rem, 20vw, 5rem)',
+                            height: 'clamp(3.5rem, 20vw, 5rem)',
+                            minWidth: '3.5rem',
+                            minHeight: '3.5rem',
+                            maxWidth: '5rem',
+                            maxHeight: '5rem'
+                          }}
                         >
-                          <Plus className="h-9 w-9" />
+                          <Plus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                         </Button>
                       </motion.div>
                     </div>
@@ -1225,7 +1384,7 @@ export default function Predictions() {
 
         {/* Navegação */}
         {currentMatch && currentPrediction && (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-2.5 md:space-y-3 mt-2 sm:mt-2.5 md:mt-3 mb-16 sm:mb-20">
             {isEditingFromPreview && (
               <Button
                 variant="primary"
@@ -1239,39 +1398,39 @@ export default function Predictions() {
               </Button>
             )}
             
-            <div data-navigation className="flex items-center justify-between gap-4 relative z-30">
+            <div data-navigation className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 relative z-30">
               <Button
                 variant="outline"
-                size="lg"
+                size="md"
                 onClick={handlePrevious}
                 disabled={currentIndex === 0 || isLocked}
-                className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
+                className="flex-1 opacity-70 hover:opacity-100 transition-opacity text-xs sm:text-sm h-9 sm:h-10 md:h-11"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                <span className="text-sm">Anterior</span>
+                <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
+                <span>Anterior</span>
               </Button>
               
               {currentIndex === matches.length - 1 ? (
                 <Button
                   variant="primary"
-                  size="lg"
+                  size="md"
                   onClick={handleShowPreview}
                   disabled={isLocked}
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm h-9 sm:h-10 md:h-11"
                 >
-                  <Eye className="h-5 w-5 mr-1" />
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-0.5 sm:mr-1" />
                   Revisar
                 </Button>
               ) : (
                 <Button
                   variant="primary"
-                  size="lg"
+                  size="md"
                   onClick={handleNext}
                   disabled={isLocked}
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm h-9 sm:h-10 md:h-11"
                 >
                   Próximo
-                  <ChevronRight className="h-5 w-5 ml-1" />
+                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 ml-0.5 sm:ml-1" />
                 </Button>
               )}
             </div>

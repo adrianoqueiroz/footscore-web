@@ -405,7 +405,7 @@ export default function EditGame() {
           {matches.length > 0 && (
             <Card className="p-0 relative overflow-hidden">
               {matches[currentMatchIndex] && (
-                <div className="px-4 pt-2 pb-1 border-b border-border/30">
+                <div className="px-3 sm:px-4 pt-1.5 sm:pt-2 md:pt-2.5 pb-1 sm:pb-1.5 border-b border-border/30">
                   <div className="flex justify-center">
                     <div
                       className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-primary/10 transition-all border border-dashed border-primary/30 hover:border-primary/50 bg-primary/5 group"
@@ -432,7 +432,7 @@ export default function EditGame() {
               )}
               <div 
                 ref={carouselContainerRef} 
-                className="relative overflow-hidden pt-3 pb-1"
+                className="relative overflow-hidden pt-1.5 sm:pt-2 md:pt-3 pb-0.5 sm:pb-1"
                 style={{ touchAction: isDraggingHorizontally ? 'pan-x' : 'pan-y pinch-zoom' }}
               >
                 <motion.div
@@ -510,27 +510,48 @@ export default function EditGame() {
                     return (
                       <div
                         key={match.id}
-                        className="flex-shrink-0 p-4"
+                        className="flex-shrink-0 p-2 sm:p-3 md:p-4"
                         style={{ 
                           width: carouselWidth > 0 ? carouselWidth : '100%',
                           minWidth: carouselWidth > 0 ? carouselWidth : '100%',
                         }}
                       >
-                        <div className="flex flex-col items-center gap-2 w-full">
-                          <div className="flex items-center gap-2 w-full relative z-30 px-2">
-                            <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
-                              <span className="text-xs font-medium text-muted-foreground">Casa</span>
-                              <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="xl" className="h-20 w-20" noCircle />
-                              <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(match.homeTeam)}</span>
+                        <div className="flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 w-full">
+                          <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 w-full relative z-30 px-0.5 sm:px-1 md:px-2">
+                            <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-1.5 min-w-0 max-w-[40%]">
+                              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">Casa</span>
+                              <TeamLogo 
+                                teamName={match.homeTeam} 
+                                logo={match.homeTeamLogo} 
+                                size="xl" 
+                                className="aspect-square" 
+                                noCircle
+                                style={{
+                                  width: 'clamp(2rem, 8vw, 4rem)',
+                                  height: 'clamp(2rem, 8vw, 4rem)',
+                                  minWidth: '2rem',
+                                  minHeight: '2rem',
+                                  maxWidth: '4rem',
+                                  maxHeight: '4rem'
+                                }}
+                              />
+                              <span 
+                                className="font-semibold text-center break-words leading-tight px-1"
+                                style={{ fontSize: 'clamp(0.75rem, 4vw, 1.25rem)' }}
+                              >{getTeamDisplayName(match.homeTeam)}</span>
                             </div>
                             
-                            <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex flex-col items-center gap-0.5 sm:gap-1 flex-shrink-0 px-0.5 sm:px-1 md:px-2">
+                              <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2">
                                 <div 
                                   className={cn(
-                                    "text-4xl font-bold tabular-nums cursor-pointer hover:opacity-70 transition-opacity",
+                                    "font-bold tabular-nums cursor-pointer hover:opacity-70 transition-opacity text-center",
                                     isCurrentMatch ? 'text-primary' : 'text-foreground'
                                   )}
+                                  style={{
+                                    fontSize: 'clamp(1.5rem, 8vw, 2.25rem)',
+                                    width: 'clamp(2rem, 10vw, 3rem)'
+                                  }}
                                   onClick={() => {
                                     setShowScoreHint(prev => {
                                       if (prev[match.id] === 'home') {
@@ -544,12 +565,19 @@ export default function EditGame() {
                                 >
                                   {match.homeScore ?? 0}
                                 </div>
-                                <span className="text-3xl font-bold text-muted-foreground">×</span>
+                                <span 
+                                  className="font-bold text-muted-foreground"
+                                  style={{ fontSize: 'clamp(1.25rem, 6vw, 1.875rem)' }}
+                                >×</span>
                                 <div 
                                   className={cn(
-                                    "text-4xl font-bold tabular-nums cursor-pointer hover:opacity-70 transition-opacity",
+                                    "font-bold tabular-nums cursor-pointer hover:opacity-70 transition-opacity text-center",
                                     isCurrentMatch ? 'text-primary' : 'text-foreground'
                                   )}
+                                  style={{
+                                    fontSize: 'clamp(1.5rem, 8vw, 2.25rem)',
+                                    width: 'clamp(2rem, 10vw, 3rem)'
+                                  }}
                                   onClick={() => {
                                     setShowScoreHint(prev => {
                                       if (prev[match.id] === 'away') {
@@ -566,10 +594,27 @@ export default function EditGame() {
                               </div>
                             </div>
                             
-                            <div className="flex-1 flex flex-col items-center gap-2 min-w-0 max-w-[40%]">
-                              <span className="text-xs font-medium text-muted-foreground">Visitante</span>
-                              <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="xl" className="h-20 w-20" noCircle />
-                              <span className="text-sm font-semibold text-center break-words leading-tight px-1">{getTeamDisplayName(match.awayTeam)}</span>
+                            <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-1.5 min-w-0 max-w-[40%]">
+                              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">Visitante</span>
+                              <TeamLogo 
+                                teamName={match.awayTeam} 
+                                logo={match.awayTeamLogo} 
+                                size="xl" 
+                                className="aspect-square" 
+                                noCircle
+                                style={{
+                                  width: 'clamp(2rem, 8vw, 4rem)',
+                                  height: 'clamp(2rem, 8vw, 4rem)',
+                                  minWidth: '2rem',
+                                  minHeight: '2rem',
+                                  maxWidth: '4rem',
+                                  maxHeight: '4rem'
+                                }}
+                              />
+                              <span 
+                                className="font-semibold text-center break-words leading-tight px-1"
+                                style={{ fontSize: 'clamp(0.75rem, 4vw, 1.25rem)' }}
+                              >{getTeamDisplayName(match.awayTeam)}</span>
                             </div>
                           </div>
 
@@ -624,8 +669,8 @@ export default function EditGame() {
               </div>
               
               {/* Barra de progresso */}
-              <div className="w-full px-4 pt-2 pb-2 border-t border-border/30">
-                <div className="w-full h-1 bg-secondary rounded-full overflow-hidden mb-2">
+              <div className="w-full px-3 sm:px-4 pt-1 sm:pt-1.5 md:pt-2 pb-1 sm:pb-1.5 md:pb-2 border-t border-border/30">
+                <div className="w-full h-0.5 sm:h-1 bg-secondary rounded-full overflow-hidden mb-0.5 sm:mb-1 md:mb-2">
                   <motion.div
                     className="h-full bg-primary rounded-full"
                     initial={{ width: '0%' }}
@@ -643,7 +688,7 @@ export default function EditGame() {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
                   {matches.length > 0 ? `Jogo ${currentMatchIndex + 1} de ${matches.length}` : ''}
                 </p>
               </div>
@@ -652,11 +697,11 @@ export default function EditGame() {
 
           {/* Navegação do Carrossel */}
           {matches.length > 0 && (
-            <div className="space-y-3">
-              <div data-navigation className="flex items-center justify-between gap-4 relative z-30">
+            <div className="space-y-2 sm:space-y-2.5 md:space-y-3 mt-2 sm:mt-2.5 md:mt-3 mb-16 sm:mb-20">
+              <div data-navigation className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 relative z-30">
                 <Button
                   variant="outline"
-                  size="lg"
+                  size="md"
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -664,15 +709,15 @@ export default function EditGame() {
                     handleCarouselNavigation('prev')
                   }}
                   disabled={currentMatchIndex === 0 || matches.length === 0}
-                  className="flex-1 opacity-70 hover:opacity-100 transition-opacity"
+                  className="flex-1 opacity-70 hover:opacity-100 transition-opacity text-xs sm:text-sm h-9 sm:h-10 md:h-11"
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  <span className="text-sm">Anterior</span>
+                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
+                  <span>Anterior</span>
                 </Button>
 
                 <Button
                   variant="primary"
-                  size="lg"
+                  size="md"
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -680,10 +725,10 @@ export default function EditGame() {
                     handleCarouselNavigation('next')
                   }}
                   disabled={currentMatchIndex >= matches.length - 1 || matches.length === 0}
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm h-9 sm:h-10 md:h-11"
                 >
-                  <span className="text-sm">Próximo</span>
-                  <ChevronRight className="h-5 w-5 ml-1" />
+                  <span>Próximo</span>
+                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 ml-0.5 sm:ml-1" />
                 </Button>
               </div>
             </div>
@@ -694,12 +739,12 @@ export default function EditGame() {
           <div className="space-y-2">
             <Card className="p-0 relative overflow-hidden">
               <div 
-                className="flex items-center justify-center gap-2 w-full p-3 overflow-x-auto"
+                className="flex items-center justify-center gap-1 sm:gap-2 w-full p-1.5 sm:p-2 md:p-3 overflow-x-auto"
                 style={{ touchAction: isButtonPressed ? 'none' : 'pan-y pinch-zoom' }}
               >
-                <div className="flex-1 flex flex-col items-center gap-3 min-w-0">
+                <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 min-w-0">
                   <span className="text-xs font-medium text-muted-foreground">Casa</span>
-                  <div className="flex items-center gap-4 md:gap-6">
+                  <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 justify-center w-full max-w-full">
                     <motion.div 
                       whileTap={{ scale: 0.9 }} 
                       transition={{ duration: 0.05 }}
@@ -751,9 +796,17 @@ export default function EditGame() {
                           })
                         }}
                         disabled={savingScore[currentMatch.id] || (currentMatch.homeScore ?? 0) === 0}
-                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                        className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                        style={{
+                          width: 'clamp(3.5rem, 20vw, 5rem)',
+                          height: 'clamp(3.5rem, 20vw, 5rem)',
+                          minWidth: '3.5rem',
+                          minHeight: '3.5rem',
+                          maxWidth: '5rem',
+                          maxHeight: '5rem'
+                        }}
                       >
-                        <Minus className="h-9 w-9" />
+                        <Minus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                       </Button>
                     </motion.div>
                     <motion.div 
@@ -807,19 +860,27 @@ export default function EditGame() {
                           })
                         }}
                         disabled={savingScore[currentMatch.id] || (currentMatch.homeScore ?? 0) === 10}
-                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                        className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                        style={{
+                          width: 'clamp(3.5rem, 20vw, 5rem)',
+                          height: 'clamp(3.5rem, 20vw, 5rem)',
+                          minWidth: '3.5rem',
+                          minHeight: '3.5rem',
+                          maxWidth: '5rem',
+                          maxHeight: '5rem'
+                        }}
                       >
-                        <Plus className="h-9 w-9" />
+                        <Plus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                       </Button>
                     </motion.div>
                   </div>
                 </div>
                 
-                <div className="h-24 w-px bg-border/60 flex-shrink-0" />
+                <div className="h-14 sm:h-18 md:h-22 lg:h-24 w-px bg-border/60 flex-shrink-0 mx-0.5 sm:mx-1 md:mx-2" />
 
-                <div className="flex-1 flex flex-col items-center gap-3 min-w-0">
+                <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 min-w-0">
                   <span className="text-xs font-medium text-muted-foreground">Visitante</span>
-                  <div className="flex items-center gap-4 md:gap-6">
+                  <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 justify-center w-full max-w-full">
                     <motion.div 
                       whileTap={{ scale: 0.9 }} 
                       transition={{ duration: 0.05 }}
@@ -871,9 +932,17 @@ export default function EditGame() {
                           })
                         }}
                         disabled={savingScore[currentMatch.id] || (currentMatch.awayScore ?? 0) === 0}
-                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                        className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                        style={{
+                          width: 'clamp(3.5rem, 20vw, 5rem)',
+                          height: 'clamp(3.5rem, 20vw, 5rem)',
+                          minWidth: '3.5rem',
+                          minHeight: '3.5rem',
+                          maxWidth: '5rem',
+                          maxHeight: '5rem'
+                        }}
                       >
-                        <Minus className="h-9 w-9" />
+                        <Minus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                       </Button>
                     </motion.div>
                     <motion.div 
@@ -927,9 +996,17 @@ export default function EditGame() {
                           })
                         }}
                         disabled={savingScore[currentMatch.id] || (currentMatch.awayScore ?? 0) === 10}
-                        className="h-20 w-20 rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                        className="rounded-full p-0 border-2 bg-secondary disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 aspect-square"
+                        style={{
+                          width: 'clamp(3.5rem, 20vw, 5rem)',
+                          height: 'clamp(3.5rem, 20vw, 5rem)',
+                          minWidth: '3.5rem',
+                          minHeight: '3.5rem',
+                          maxWidth: '5rem',
+                          maxHeight: '5rem'
+                        }}
                       >
-                        <Plus className="h-9 w-9" />
+                        <Plus className="w-full h-full p-2" style={{ minWidth: '1.5rem', minHeight: '1.5rem' }} />
                       </Button>
                     </motion.div>
                   </div>

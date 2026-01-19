@@ -93,15 +93,29 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
               return (
                 <motion.button
                   key={item.key}
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.preventDefault()
                     e.stopPropagation()
 
                     // Prevenir múltiplas navegações simultâneas
                     if (isNavigatingRef.current) return
 
-                    // Prioridade máxima: navegar imediatamente sem verificações desnecessárias
-                    if (location.pathname !== item.path) {
+                    // Verificar se há guard de navegação ativo
+                    const navigationAllowed = await new Promise<boolean>((resolve) => {
+                      const navigationEvent = new CustomEvent('navigation-attempt', {
+                        detail: { 
+                          path: item.path,
+                          resolve
+                        }
+                      })
+                      window.dispatchEvent(navigationEvent)
+                      
+                      // Timeout de segurança: se não houver resposta em 200ms, permitir navegação
+                      setTimeout(() => resolve(true), 200)
+                    })
+
+                    // Se o evento permitiu navegação, continuar
+                    if (location.pathname !== item.path && navigationAllowed) {
                       isNavigatingRef.current = true
                       // Feedback háptico em background (não bloqueante)
                       setTimeout(() => triggerHaptic('light'), 0)
@@ -113,15 +127,29 @@ export default function BottomNav({ isAdmin = false }: BottomNavProps) {
                       }, 100)
                     }
                   }}
-                  onTouchStart={isIOS ? (e) => {
+                  onTouchStart={isIOS ? async (e) => {
                     e.preventDefault()
                     e.stopPropagation()
 
                     // Prevenir múltiplas navegações simultâneas
                     if (isNavigatingRef.current) return
 
+                    // Verificar se há guard de navegação ativo
+                    const navigationAllowed = await new Promise<boolean>((resolve) => {
+                      const navigationEvent = new CustomEvent('navigation-attempt', {
+                        detail: { 
+                          path: item.path,
+                          resolve
+                        }
+                      })
+                      window.dispatchEvent(navigationEvent)
+                      
+                      // Timeout de segurança: se não houver resposta em 200ms, permitir navegação
+                      setTimeout(() => resolve(true), 200)
+                    })
+
                     // Para iOS: usar touchstart para resposta mais imediata
-                    if (location.pathname !== item.path) {
+                    if (location.pathname !== item.path && navigationAllowed) {
                       isNavigatingRef.current = true
                       // Forçar navegação imediata no iOS usando requestAnimationFrame
                       requestAnimationFrame(() => {
