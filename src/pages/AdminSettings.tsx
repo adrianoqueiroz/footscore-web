@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Phone, ArrowLeft, Save, Plus, X, Bell } from 'lucide-react'
+import { Phone, ArrowLeft, Save, Plus, X, Bell, Users, CheckCircle2, XCircle } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Switch from '@/components/ui/Switch'
+import PageHeader from '@/components/ui/PageHeader'
 import { config } from '@/config'
 import { useToastContext } from '@/contexts/ToastContext'
 import { configService } from '@/services/config.service'
+import { apiService } from '@/services/api.service'
+import { User } from '@/types'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 export default function AdminSettings() {
   const navigate = useNavigate()
@@ -16,6 +21,11 @@ export default function AdminSettings() {
   const [gameTimes, setGameTimes] = useState<string[]>([])
   const [newGameTime, setNewGameTime] = useState('')
   const [rankingTopN, setRankingTopN] = useState(3)
+  const [notificationTestMode, setNotificationTestMode] = useState(false)
+  const [notificationTestUsers, setNotificationTestUsers] = useState<string[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [searchUserTerm, setSearchUserTerm] = useState('')
 
   useEffect(() => {
     config.getAdminWhatsApp().then(value => {
@@ -35,7 +45,61 @@ export default function AdminSettings() {
     }).catch(() => {
       setRankingTopN(3)
     })
+
+    configService.getNotificationTestMode().then(enabled => {
+      setNotificationTestMode(enabled)
+    }).catch(() => {
+      setNotificationTestMode(false)
+    })
+
+    configService.getNotificationTestUsers().then(userIds => {
+      setNotificationTestUsers(userIds)
+    }).catch(() => {
+      setNotificationTestUsers([])
+    })
+
+    loadAllUsers()
   }, [])
+
+  const loadAllUsers = async () => {
+    setLoadingUsers(true)
+    try {
+      const users = await apiService.get<User[]>('/users')
+      setAllUsers(users)
+    } catch (error) {
+      console.error('Error loading users:', error)
+      toast.error('Erro ao carregar usuários')
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  const handleToggleNotificationTestMode = async (enabled: boolean) => {
+    try {
+      await configService.setNotificationTestMode(enabled)
+      setNotificationTestMode(enabled)
+      toast.success(enabled ? 'Modo de teste de notificações ativado' : 'Modo de teste de notificações desativado')
+    } catch (error: any) {
+      console.error('Error setting notification test mode:', error)
+      toast.error(error?.message || 'Erro ao atualizar modo de teste')
+    }
+  }
+
+  const handleToggleTestUser = async (userId: string) => {
+    const isSelected = notificationTestUsers.includes(userId)
+    const newList = isSelected
+      ? notificationTestUsers.filter(id => id !== userId)
+      : [...notificationTestUsers, userId]
+
+    try {
+      await configService.setNotificationTestUsers(newList)
+      setNotificationTestUsers(newList)
+      toast.success(isSelected ? 'Usuário removido da lista de teste' : 'Usuário adicionado à lista de teste')
+    } catch (error: any) {
+      console.error('Error updating test users:', error)
+      toast.error(error?.message || 'Erro ao atualizar lista de usuários')
+    }
+  }
 
   const handleSaveWhatsAppNumber = async () => {
     if (!whatsAppNumber || whatsAppNumber.trim() === '') {
@@ -106,20 +170,11 @@ export default function AdminSettings() {
   return (
     <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07] min-h-0">
       <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-6 p-4 md:p-6 lg:p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin')}
-            className="rounded-full h-10 w-10 p-0 shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold">Configurações</h2>
-            <p className="text-sm text-muted-foreground">Gerencie as configurações do aplicativo</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Configurações"
+          description="Gerencie as configurações do aplicativo"
+          backPath="/admin"
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -246,6 +301,115 @@ export default function AdminSettings() {
                 <Save className="mr-2 h-4 w-4" />
                 Salvar
               </Button>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Configuração de Notificações de Teste */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <Card>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">Modo de Teste de Notificações</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Quando ativado, apenas os usuários selecionados receberão notificações push. 
+                Útil para testes sem notificar todos os usuários.
+              </p>
+
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  <p className="text-sm font-medium">Ativar Modo de Teste</p>
+                  <p className="text-xs text-muted-foreground">
+                    {notificationTestMode 
+                      ? `${notificationTestUsers.length} usuário(s) selecionado(s)`
+                      : 'Todas as notificações serão enviadas normalmente'
+                    }
+                  </p>
+                </div>
+                <Switch
+                  checked={notificationTestMode}
+                  onCheckedChange={handleToggleNotificationTestMode}
+                />
+              </div>
+
+              {notificationTestMode && (
+                <div className="pt-4 border-t border-border space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Selecionar Usuários para Teste</label>
+                    <div className="relative mb-3">
+                      <Input
+                        type="text"
+                        value={searchUserTerm}
+                        onChange={(e) => setSearchUserTerm(e.target.value)}
+                        placeholder="Buscar usuário por nome ou email..."
+                        className="pl-9"
+                      />
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  {loadingUsers ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Carregando usuários...</p>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {allUsers
+                        .filter(user => {
+                          if (!searchUserTerm.trim()) return true
+                          const search = searchUserTerm.toLowerCase()
+                          return user.name.toLowerCase().includes(search) ||
+                                 user.email.toLowerCase().includes(search)
+                        })
+                        .map(user => {
+                          const isSelected = notificationTestUsers.includes(user.id)
+                          return (
+                            <motion.div
+                              key={user.id}
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+                              onClick={() => handleToggleTestUser(user.id)}
+                            >
+                              <UserAvatar user={user} size="sm" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{user.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                              </div>
+                              {isSelected ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                              )}
+                            </motion.div>
+                          )
+                        })}
+                      {allUsers.filter(user => {
+                        if (!searchUserTerm.trim()) return true
+                        const search = searchUserTerm.toLowerCase()
+                        return user.name.toLowerCase().includes(search) ||
+                               user.email.toLowerCase().includes(search)
+                      }).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhum usuário encontrado
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {notificationTestUsers.length > 0 && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {notificationTestUsers.length} usuário(s) selecionado(s) para receber notificações durante os testes
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </Card>
         </motion.div>

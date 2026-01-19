@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Skeleton from '@/components/ui/Skeleton'
 import Switch from '@/components/ui/Switch'
+import PageHeader from '@/components/ui/PageHeader'
+import UserAvatar from '@/components/ui/UserAvatar'
 import { apiService } from '@/services/api.service'
 import { authService } from '@/services/auth.service'
 import { User } from '@/types'
@@ -176,47 +178,24 @@ export default function AdminManageUsers() {
     return (
       <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07] min-h-0 overflow-x-hidden">
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-6 p-4 md:p-6 lg:p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditingUser(null)
-                setOriginalUser(null)
-                setNewPassword('')
-                setEditingCity('')
-                setEditingLocation('')
-                setShowOtherLocation(false)
-              }}
-              className="rounded-full h-10 w-10 p-0 shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold">Editar Usuário</h2>
-              <p className="text-sm text-muted-foreground">{editingUser.name}</p>
-            </div>
-          </div>
+          <PageHeader
+            title="Editar Usuário"
+            description={editingUser.name}
+            onBack={() => {
+              setEditingUser(null)
+              setOriginalUser(null)
+              setNewPassword('')
+              setEditingCity('')
+              setEditingLocation('')
+              setShowOtherLocation(false)
+            }}
+          />
           
           <div className="space-y-4 pt-4">
             <Card>
               <div className="space-y-4">
                 <div className="flex justify-center pt-2">
-                  {editingUser.avatar ? (
-                    <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-2 border-primary shadow-sm" style={{ padding: '2px' }}>
-                      <div className="h-full w-full rounded-full overflow-hidden border-2 border-background">
-                        <img src={editingUser.avatar} alt={editingUser.name} className="h-full w-full object-cover rounded-full" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-primary/20 border-2 border-primary/50 shadow-sm" style={{ padding: '2px' }}>
-                      <div className="h-full w-full rounded-full border-2 border-background flex items-center justify-center bg-gradient-to-br from-primary/30 to-primary/20">
-                        <span className="font-bold text-2xl text-primary">
-                          {editingUser.name.split(' ').slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('') || editingUser.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  <UserAvatar user={editingUser} size="xl" />
                 </div>
                 
                 <div className="space-y-3">
@@ -442,20 +421,11 @@ export default function AdminManageUsers() {
   return (
     <div className="flex justify-center bg-background/95 bg-grid-small-white/[0.07] min-h-0 overflow-x-hidden">
       <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl space-y-6 p-4 md:p-6 lg:p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin')}
-            className="rounded-full h-10 w-10 p-0 shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold">Gerenciar Usuários</h2>
-            <p className="text-sm text-muted-foreground">Atualizar dados e permissões dos usuários</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Gerenciar Usuários"
+          description="Atualizar dados e permissões dos usuários"
+          backPath="/admin"
+        />
 
         <div className="space-y-4 pt-4">
           <div className="relative">
@@ -509,17 +479,7 @@ export default function AdminManageUsers() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          {user.avatar ? (
-                            <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary shadow-sm overflow-hidden">
-                              <img src={user.avatar} alt={user.name} className="h-full w-full object-cover rounded-full" />
-                            </div>
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-primary/20 border-2 border-primary/50 shadow-sm">
-                              <span className="font-bold text-sm text-primary">
-                                {user.name.split(' ').slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('') || user.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
+                          <UserAvatar user={user} size="sm" />
                           <div>
                             <p className="font-semibold">{user.name}</p>
                             <p className="text-xs text-muted-foreground">{user.email}</p>

@@ -103,5 +103,43 @@ export const configService = {
       throw error
     }
   },
+
+  async getNotificationTestUsers(): Promise<string[]> {
+    try {
+      const response = await apiService.get<{ userIds: string[] }>('/config/notification-test-users/list')
+      return response.userIds || []
+    } catch (error) {
+      console.error('Error fetching notification test users:', error)
+      return []
+    }
+  },
+
+  async setNotificationTestUsers(userIds: string[]): Promise<void> {
+    try {
+      await apiService.put('/config/notification-test-users/list', { userIds })
+    } catch (error) {
+      console.error('Error setting notification test users:', error)
+      throw error
+    }
+  },
+
+  async getNotificationTestMode(): Promise<boolean> {
+    try {
+      const response = await apiService.get<{ enabled: boolean }>('/config/notification-test-mode/enabled')
+      return response.enabled || false
+    } catch (error) {
+      console.error('Error fetching notification test mode:', error)
+      return false
+    }
+  },
+
+  async setNotificationTestMode(enabled: boolean): Promise<void> {
+    try {
+      await apiService.put('/config/notification-test-mode/enabled', { enabled })
+    } catch (error) {
+      console.error('Error setting notification test mode:', error)
+      throw error
+    }
+  },
 }
 

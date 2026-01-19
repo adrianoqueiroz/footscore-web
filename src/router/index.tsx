@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { authService } from '@/services/auth.service'
 import { User } from '@/types'
@@ -141,20 +141,51 @@ const PrivateRoute = () => {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  // Função para atualizar o estado do usuário
+  const updateUserState = useCallback(() => {
+    const currentUser = authService.getCurrentUser()
+    if (currentUser) {
+      setUser(currentUser)
+      // Verificar se precisa fazer onboarding (needsOnboarding === true)
+      setNeedsOnboarding(currentUser.needsOnboarding === true)
+    } else {
+      setUser(null)
+      setNeedsOnboarding(false)
+    }
+    setLoading(false)
+  }, [])
+
   useEffect(() => {
     // Usar um pequeno delay para evitar flash de loading muito rápido
     const timer = setTimeout(() => {
-      const currentUser = authService.getCurrentUser()
-      if (currentUser) {
-        setUser(currentUser)
-        // Verificar se precisa fazer onboarding (needsOnboarding === true)
-        setNeedsOnboarding(currentUser.needsOnboarding === true)
-      }
-      setLoading(false)
+      updateUserState()
     }, 50)
 
-    return () => clearTimeout(timer)
-  }, [])
+    // Listener para atualizar quando o storage mudar (login/logout)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bolao_user' || e.key === 'auth_token') {
+        console.log('[Router] Storage mudou, atualizando estado do usuário')
+        updateUserState()
+      }
+    }
+
+    // Listener para eventos customizados de login
+    const handleLogin = () => {
+      console.log('[Router] Evento de login detectado, atualizando estado')
+      updateUserState()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('user-login', handleLogin)
+    window.addEventListener('user-logout', handleLogin)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('user-login', handleLogin)
+      window.removeEventListener('user-logout', handleLogin)
+    }
+  }, [updateUserState])
 
   const handleOnboardingComplete = () => {
     const currentUser = authService.getCurrentUser()

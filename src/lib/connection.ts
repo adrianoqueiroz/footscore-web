@@ -1,9 +1,9 @@
 import { useToastContext } from '@/contexts/ToastContext'
+import { API_BASE_URL } from '@/config/api'
 
 // Função para verificar conexão com o servidor
 export async function checkServerConnection(): Promise<boolean> {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
     const baseURL = API_BASE_URL.replace(/\/api$/, '')
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 segundos de timeout

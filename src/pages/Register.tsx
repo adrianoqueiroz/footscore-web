@@ -29,25 +29,49 @@ export default function Register() {
     } catch (error: any) {
       console.error('Registration error:', error)
       
-      // Verificar se é erro de validação de senha
-      const isPasswordError = error?.errors?.some((err: any) => 
-        err.param === 'password' || 
-        (err.msg && err.msg.toLowerCase().includes('senha')) ||
-        (err.message && err.message.toLowerCase().includes('senha'))
-      ) || error?.message?.toLowerCase().includes('senha')
+      // Verificar se é erro de conexão/timeout
+      const isConnectionError = 
+        error?.status === 0 ||
+        error?.isConnectionError === true ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('NetworkError') ||
+        error?.message?.includes('timeout') ||
+        error?.message?.includes('Connection terminated') ||
+        error?.name === 'TypeError' ||
+        error?.name === 'AbortError'
       
-      if (isPasswordError) {
-        // Extrair mensagem específica de senha
-        const passwordErr = error?.errors?.find((err: any) => 
+      if (isConnectionError) {
+        const { API_BASE_URL } = await import('@/config/api')
+        toast.error(
+          `Erro de conexão com o servidor.\n\n` +
+          `Verifique se:\n` +
+          `- O backend está rodando\n` +
+          `- A URL está correta: ${API_BASE_URL}\n` +
+          `- Você está na mesma rede Wi-Fi\n\n` +
+          `Tente novamente.`,
+          8000
+        )
+      } else {
+        // Verificar se é erro de validação de senha
+        const isPasswordError = error?.errors?.some((err: any) => 
           err.param === 'password' || 
           (err.msg && err.msg.toLowerCase().includes('senha')) ||
           (err.message && err.message.toLowerCase().includes('senha'))
-        )
-        const passwordMessage = passwordErr?.msg || passwordErr?.message || error?.message || 'A senha deve ter no mínimo 6 caracteres'
-        setPasswordError(passwordMessage)
-      } else {
-        const errorMessage = error?.message || 'Erro ao registrar. Tente novamente.'
-        toast.error(errorMessage)
+        ) || error?.message?.toLowerCase().includes('senha')
+        
+        if (isPasswordError) {
+          // Extrair mensagem específica de senha
+          const passwordErr = error?.errors?.find((err: any) => 
+            err.param === 'password' || 
+            (err.msg && err.msg.toLowerCase().includes('senha')) ||
+            (err.message && err.message.toLowerCase().includes('senha'))
+          )
+          const passwordMessage = passwordErr?.msg || passwordErr?.message || error?.message || 'A senha deve ter no mínimo 6 caracteres'
+          setPasswordError(passwordMessage)
+        } else {
+          const errorMessage = error?.message || 'Erro ao registrar. Tente novamente.'
+          toast.error(errorMessage)
+        }
       }
     } finally {
       setLoading(false)

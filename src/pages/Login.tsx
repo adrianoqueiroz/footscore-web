@@ -38,8 +38,33 @@ export default function Login() {
       navigate('/')
     } catch (error: any) {
       console.error('Google login error:', error)
-      const errorMessage = error?.message || 'Erro ao fazer login com Google. Tente novamente.'
-      toast.error(errorMessage)
+      
+      // Verificar se é erro de conexão/timeout
+      const isConnectionError = 
+        error?.status === 0 ||
+        error?.isConnectionError === true ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('NetworkError') ||
+        error?.message?.includes('timeout') ||
+        error?.message?.includes('Connection terminated') ||
+        error?.name === 'TypeError' ||
+        error?.name === 'AbortError'
+      
+      if (isConnectionError) {
+        const { API_BASE_URL } = await import('@/config/api')
+        toast.error(
+          `Erro de conexão com o servidor.\n\n` +
+          `Verifique se:\n` +
+          `- O backend está rodando\n` +
+          `- A URL está correta: ${API_BASE_URL}\n` +
+          `- Você está na mesma rede Wi-Fi\n\n` +
+          `Tente novamente.`,
+          8000
+        )
+      } else {
+        const errorMessage = error?.message || 'Erro ao fazer login com Google. Tente novamente.'
+        toast.error(errorMessage)
+      }
     } finally {
       setGoogleLoading(false)
     }
@@ -54,12 +79,95 @@ export default function Login() {
     e.preventDefault();
     setFormLoading(true);
     try {
-      await authService.login({ email, password });
-      navigate('/');
+      console.log('[Login] Iniciando login para:', email);
+      const response = await authService.login({ email, password });
+      console.log('[Login] Login bem-sucedido:', response);
+      
+      // Verificar se o usuário foi salvo corretamente
+      const savedUser = authService.getCurrentUser();
+      if (!savedUser) {
+        console.error('[Login] ERRO: Usuário não foi salvo após login bem-sucedido');
+        toast.error('Erro ao salvar dados do usuário. Tente novamente.');
+        return;
+      }
+      
+      console.log('[Login] Usuário salvo:', savedUser);
+      console.log('[Login] needsOnboarding:', savedUser.needsOnboarding);
+      
+      // Forçar atualização do router
+      window.dispatchEvent(new Event('user-login'));
+      
+      // Pequeno delay para garantir que o router atualizou
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 100);
     } catch (error: any) {
-      console.error('Login error:', error);
-      const errorMessage = error?.message || 'Erro ao fazer login. Verifique suas credenciais.';
-      toast.error(errorMessage);
+      console.error('[Login] Erro completo:', error);
+      console.error('[Login] Status:', error?.status);
+      console.error('[Login] Message:', error?.message);
+      console.error('[Login] Error name:', error?.name);
+      
+      // Verificar se é erro de conexão/timeout
+      const isConnectionError = 
+        error?.status === 0 ||
+        error?.isConnectionError === true ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('NetworkError') ||
+        error?.message?.includes('timeout') ||
+        error?.message?.includes('Connection terminated') ||
+        error?.name === 'TypeError' ||
+        error?.name === 'AbortError'
+      
+      // Verificar se é erro de banco de dados
+      if (error?.status === 503 && error?.isDatabaseError === true) {
+        if (error?.isAzure === true) {
+          toast.error(
+            `🔥 Firewall do Azure bloqueando conexão.\n\n` +
+            `Seu IP atual não está nas regras de firewall do Azure PostgreSQL.\n\n` +
+            `Solução:\n` +
+            `1. Execute no backend: npm run get-my-ip\n` +
+            `2. Acesse portal.azure.com\n` +
+            `3. Vá em PostgreSQL > Networking\n` +
+            `4. Adicione seu IP nas regras de firewall\n\n` +
+            `Consulte TROUBLESHOOTING_AZURE_FIREWALL.md`,
+            12000
+          )
+        } else {
+          toast.error(
+            `⚠️ Banco de dados não está acessível.\n\n` +
+            `O servidor não consegue se conectar ao PostgreSQL.\n\n` +
+            `Verifique se:\n` +
+            `- O PostgreSQL está rodando\n` +
+            `- A configuração do banco está correta\n` +
+            `- Execute: npm run test:db-connection (no backend)\n\n` +
+            `Consulte TROUBLESHOOTING_DB.md para mais detalhes.`,
+            10000
+          )
+        }
+      } else if (isConnectionError) {
+        const { API_BASE_URL } = await import('@/config/api')
+        toast.error(
+          `Erro de conexão com o servidor.\n\n` +
+          `Verifique se:\n` +
+          `- O backend está rodando\n` +
+          `- A URL está correta: ${API_BASE_URL}\n` +
+          `- Você está na mesma rede Wi-Fi\n\n` +
+          `Tente novamente.`,
+          8000
+        )
+      } else {
+        // Mostrar mensagem de erro mais detalhada
+        let errorMessage = error?.message || 'Erro ao fazer login. Verifique suas credenciais.';
+        
+        // Se for erro 401, é credencial inválida
+        if (error?.status === 401) {
+          errorMessage = 'Email ou senha incorretos. Verifique suas credenciais.';
+        } else if (error?.status === 400) {
+          errorMessage = error?.message || 'Dados inválidos. Verifique o formulário.';
+        }
+        
+        toast.error(errorMessage);
+      }
     } finally {
       setFormLoading(false);
     }

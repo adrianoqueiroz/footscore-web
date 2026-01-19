@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone as PhoneIcon, MapPin, UserCircle, ArrowRight, ArrowLeft, Check, Bell, BellOff } from 'lucide-react'
+import { Phone as PhoneIcon, MapPin, UserCircle, ArrowRight, ArrowLeft, Check, Bell, BellOff, LogOut } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Logo from '@/components/ui/Logo'
 import { authService } from '@/services/auth.service'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { useNavigate } from 'react-router-dom'
+import { useConfirmContext } from '@/contexts/ConfirmContext'
 
 interface OnboardingProps {
   onComplete: () => void
@@ -14,6 +16,8 @@ interface OnboardingProps {
 type Step = 1 | 2 | 3 | 4
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
+  const navigate = useNavigate()
+  const confirm = useConfirmContext()
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [city, setCity] = useState('')
   const [location, setLocation] = useState('')
@@ -200,7 +204,51 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         })
         onComplete()
       } catch (error: any) {
-        setError(error?.message || 'Erro ao salvar informações. Tente novamente.')
+        console.error('[Onboarding] Erro ao salvar perfil:', error)
+        
+        // Verificar se é erro de banco de dados
+        if (error?.status === 503 && error?.isDatabaseError === true) {
+          if (error?.isAzure === true) {
+            setError(
+              `🔥 Firewall do Azure bloqueando conexão.\n\n` +
+              `Seu IP atual não está nas regras de firewall do Azure PostgreSQL.\n\n` +
+              `Solução:\n` +
+              `1. Execute no backend: npm run get-my-ip\n` +
+              `2. Acesse portal.azure.com\n` +
+              `3. Vá em PostgreSQL > Networking\n` +
+              `4. Adicione seu IP nas regras de firewall\n\n` +
+              `Consulte TROUBLESHOOTING_AZURE_FIREWALL.md`
+            )
+          } else {
+            setError(
+              `⚠️ Banco de dados não está acessível.\n\n` +
+              `O servidor não consegue se conectar ao PostgreSQL.\n\n` +
+              `Verifique se o PostgreSQL está rodando e tente novamente.`
+            )
+          }
+        } else if (
+          error?.status === 0 ||
+          error?.isConnectionError === true ||
+          error?.message?.includes('Failed to fetch') ||
+          error?.message?.includes('NetworkError') ||
+          error?.message?.includes('timeout') ||
+          error?.message?.includes('Connection terminated') ||
+          error?.name === 'TypeError' ||
+          error?.name === 'AbortError'
+        ) {
+          // Erro de conexão com o backend
+          const { API_BASE_URL } = await import('@/config/api')
+          setError(
+            `Erro de conexão com o servidor.\n\n` +
+            `Verifique se:\n` +
+            `- O backend está rodando\n` +
+            `- A URL da API está correta: ${API_BASE_URL}\n` +
+            `- Você está na mesma rede Wi-Fi\n\n` +
+            `Tente novamente em alguns instantes.`
+          )
+        } else {
+          setError(error?.message || 'Erro ao salvar informações. Tente novamente.')
+        }
       } finally {
         setLoading(false)
       }
@@ -244,6 +292,19 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     }
   }
 
+  const handleLogout = async () => {
+    const confirmed = await confirm.confirm({
+      title: 'Sair da Conta',
+      message: 'Tem certeza que deseja sair? Você precisará fazer login novamente para continuar.',
+      variant: 'warning',
+    })
+
+    if (confirmed) {
+      authService.logout()
+      navigate('/login')
+    }
+  }
+
   return (
     <div 
       className="flex flex-col px-4 py-4" 
@@ -261,7 +322,19 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         style={{ flex: '1 1 auto', minHeight: 0 }}
       >
         {/* Header com Logo e Bem-vindo */}
-        <div className="text-center mb-6 md:mb-8 flex-shrink-0">
+        <div className="text-center mb-6 md:mb-8 flex-shrink-0 relative">
+          {/* Botão de logout no canto superior direito */}
+          <div className="absolute top-0 right-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="text-xs"
+            >
+              <LogOut className="h-3 w-3 mr-1" />
+              Sair
+            </Button>
+          </div>
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}

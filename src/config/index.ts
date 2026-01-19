@@ -156,7 +156,16 @@ export const config = {
   setGameTimes,
 
   // URL base da API
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  get apiBaseUrl() {
+    // Importar dinamicamente para evitar dependência circular
+    try {
+      // @ts-ignore - import dinâmico
+      const { API_BASE_URL } = require('./api')
+      return API_BASE_URL
+    } catch {
+      return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+    }
+  },
 }
 
 

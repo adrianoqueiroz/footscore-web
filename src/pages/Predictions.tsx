@@ -584,9 +584,9 @@ export default function Predictions() {
   const currentPrediction = currentMatch ? predictions[currentMatch.id] || { matchId: currentMatch.id, homeScore: 0, awayScore: 0 } : null
   const matchLocked = currentMatch ? matchService.isMatchLocked(currentMatch) : false
 
-  // Classes CSS para os cards (sempre verde como padrão)
+  // Classes CSS para os cards (cores neutras para consistência)
   const getMatchCardClasses = () => {
-    return 'border-2 border-green-400 bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg'
+    return 'border border-border bg-secondary/50 shadow-lg'
   }
 
 

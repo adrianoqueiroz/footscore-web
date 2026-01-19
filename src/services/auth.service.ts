@@ -17,10 +17,12 @@ export const authService = {
       }
       
       const user = response.user
-      // Converter isAdmin de 1/0 para boolean se necessário
+      // Converter isAdmin de 1/0 para boolean se necess?rio
       user.isAdmin = Boolean(user.isAdmin === 1 || user.isAdmin === true)
+      // Converter needsOnboarding para boolean se necess?rio
+      user.needsOnboarding = Boolean(user.needsOnboarding !== false)
       
-      // Verifica se já tem telefone salvo
+      // Verifica se j? tem telefone salvo
       const savedPhone = localStorage.getItem(STORAGE_PHONE_KEY)
       if (savedPhone) {
         user.phone = savedPhone
@@ -28,8 +30,9 @@ export const authService = {
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
       return user
-    } catch (error) {
-      console.error('Error logging in:', error)
+    } catch (error: any) {
+      console.error('Error logging in with Google:', error)
+      // Re-lan?ar o erro para que o componente possa trat?-lo adequadamente
       throw error
     }
   },
@@ -37,20 +40,51 @@ export const authService = {
   // New login function
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
+      console.log('[AuthService] Iniciando login para:', credentials.email);
       // Enviar apenas email (identifier será tratado como email no backend)
       const response = await apiService.post<AuthResponse>('/auth/login', {
         identifier: credentials.email,
         password: credentials.password
       });
+      
+      console.log('[AuthService] Resposta recebida:', response);
+      
+      if (!response || !response.user) {
+        console.error('[AuthService] ERRO: Resposta inválida do servidor:', response);
+        throw new Error('Resposta inválida do servidor');
+      }
+      
+      if (!response.token) {
+        console.warn('[AuthService] AVISO: Token não recebido na resposta');
+      }
+      
       // Converter isAdmin de 1/0 para boolean se necessário
       response.user.isAdmin = Boolean(response.user.isAdmin === 1 || response.user.isAdmin === true)
       // Converter needsOnboarding para boolean se necessário
       response.user.needsOnboarding = Boolean(response.user.needsOnboarding !== false)
-      localStorage.setItem('auth_token', response.token);
+      
+      console.log('[AuthService] Salvando token e usuário no localStorage');
+      localStorage.setItem('auth_token', response.token || '');
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response.user));
+      
+      // Verificar se foi salvo corretamente
+      const savedUser = this.getCurrentUser();
+      if (!savedUser) {
+        console.error('[AuthService] ERRO: Usuário não foi salvo corretamente');
+        throw new Error('Erro ao salvar dados do usuário');
+      }
+      
+      console.log('[AuthService] Login concluído com sucesso');
+      
+      // Disparar evento customizado para notificar o router
+      window.dispatchEvent(new Event('user-login'));
+      
       return response;
-    } catch (error) {
-      console.error('Error logging in:', error);
+    } catch (error: any) {
+      console.error('[AuthService] Erro no login:', error);
+      console.error('[AuthService] Tipo do erro:', typeof error);
+      console.error('[AuthService] Status do erro:', error?.status);
+      // Re-lançar o erro para que o componente possa tratá-lo adequadamente
       throw error;
     }
   },
@@ -59,9 +93,9 @@ export const authService = {
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
       const response = await apiService.post<AuthResponse>('/auth/register', userData);
-      // Converter isAdmin de 1/0 para boolean se necessário
+      // Converter isAdmin de 1/0 para boolean se necess?rio
       response.user.isAdmin = Boolean(response.user.isAdmin === 1 || response.user.isAdmin === true)
-      // Converter needsOnboarding para boolean se necessário
+      // Converter needsOnboarding para boolean se necess?rio
       response.user.needsOnboarding = Boolean(response.user.needsOnboarding !== false)
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response.user));
@@ -92,9 +126,9 @@ export const authService = {
     try {
       const response = await apiService.put<{ user: User }>('/auth/profile', updates)
       const updatedUser = response.user
-      // Converter isAdmin de 1/0 para boolean se necessário
+      // Converter isAdmin de 1/0 para boolean se necess?rio
       updatedUser.isAdmin = Boolean(updatedUser.isAdmin === 1 || updatedUser.isAdmin === true)
-      // Converter needsOnboarding para boolean se necessário
+      // Converter needsOnboarding para boolean se necess?rio
       updatedUser.needsOnboarding = Boolean(updatedUser.needsOnboarding !== false)
       
       // Atualizar localStorage
@@ -152,7 +186,7 @@ export const authService = {
       }
     } catch (error) {
       console.error('Error fetching notification preferences:', error)
-      // Retornar padrões se erro
+      // Retornar padr?es se erro
       return {
         notifyGoals: true,
         notifyGoalsAllTeams: true,
@@ -204,9 +238,9 @@ export const authService = {
     try {
       const response = await apiService.get<{ user: User }>('/auth/me')
       const user = response.user
-      // Converter isAdmin de 1/0 para boolean se necessário
+      // Converter isAdmin de 1/0 para boolean se necess?rio
       user.isAdmin = Boolean(user.isAdmin === 1 || user.isAdmin === true)
-      // Converter needsOnboarding para boolean se necessário
+      // Converter needsOnboarding para boolean se necess?rio
       user.needsOnboarding = Boolean(user.needsOnboarding !== false)
       
       // Atualizar localStorage
@@ -225,9 +259,9 @@ export const authService = {
 
     try {
       const user = JSON.parse(userStr) as User
-      // Converter isAdmin de 1/0 para boolean se necessário (pode estar salvo como número)
+      // Converter isAdmin de 1/0 para boolean se necess?rio (pode estar salvo como n?mero)
       user.isAdmin = Boolean(user.isAdmin === 1 || user.isAdmin === true)
-      // Converter needsOnboarding para boolean se necessário
+      // Converter needsOnboarding para boolean se necess?rio
       user.needsOnboarding = Boolean(user.needsOnboarding !== false)
       return user
     } catch (error) {
@@ -243,6 +277,9 @@ export const authService = {
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_PHONE_KEY)
     localStorage.removeItem('auth_token')
+    
+    // Disparar evento customizado para notificar o router
+    window.dispatchEvent(new Event('user-logout'));
   },
 
   isAuthenticated(): boolean {

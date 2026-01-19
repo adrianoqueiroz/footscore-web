@@ -34,7 +34,7 @@ export function useConnectionStatus() {
 
     try {
       // Tentar fazer uma requisição simples para verificar conexão
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+      const { API_BASE_URL } = await import('@/config/api')
       const baseURL = API_BASE_URL.replace(/\/api$/, '')
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 segundos de timeout

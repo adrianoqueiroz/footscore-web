@@ -20,7 +20,7 @@ export default function ConnectionErrorScreen() {
     
     try {
       // Fazer um "ping" rápido para verificar se o servidor está acessível
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+      const { API_BASE_URL } = await import('@/config/api')
       const baseURL = API_BASE_URL.replace(/\/api$/, '')
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 segundos de timeout

@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Info, Trophy, Radio, Lock, CheckCircle2, Clock } from 'lucide-react'
+import { Plus, Info, Trophy, Lock } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import TeamLogo from '@/components/ui/TeamLogo'
+import MatchCard from '@/components/ui/MatchCard'
 import RoundSelector from '@/components/ui/RoundSelector'
 import ContentWrapper from '@/components/ui/ContentWrapper'
 import { matchService } from '@/services/match.service'
@@ -312,34 +312,62 @@ export default function Matches() {
     }
   }
 
-  // Função helper para determinar informações de exibição do jogo
-  const getMatchDisplayInfo = (match: Match) => {
-    const statusType = match.status || 'scheduled'
-    const isLive = statusType === 'live'
-    const isFinished = statusType === 'finished'
-    const isScheduled = statusType === 'scheduled' || !statusType
-    
-    const hasScore = match.homeScore !== undefined && match.awayScore !== undefined
-    const scoreDisplay = hasScore ? `${match.homeScore} × ${match.awayScore}` : null
-    
-    const matchDate = parseMatchDateTime(match)
-    const dateDisplay = matchDate ? {
-      dayOfWeek: format(matchDate, "EEE", { locale: ptBR }),
-      date: format(matchDate, "dd/MM"),
-      time: match.time || '??:??'
-    } : null
-    
-    return {
-      statusType: statusType as 'scheduled' | 'live' | 'finished',
-      showLiveBadge: isLive,
-      showScore: hasScore && (isLive || isFinished),
-      scoreDisplay,
-      dateDisplay,
-      isLive,
-      isFinished,
-      isScheduled
+  // Agrupar matches por data
+  const matchesByDate = useMemo(() => {
+    if (matches.length === 0) return []
+
+    const grouped = matches.reduce((acc, match) => {
+      const matchDate = parseMatchDateTime(match)
+      if (!matchDate) {
+        // Se não tem data válida, colocar em um grupo "sem data"
+        const noDateKey = 'sem-data'
+        if (!acc[noDateKey]) {
+          acc[noDateKey] = { matches: [], date: null, dateLabel: 'Sem data' }
+        }
+        acc[noDateKey].matches.push(match)
+        return acc
+      }
+
+      // Extrair data local (ano, mês, dia) para usar como chave
+      // Isso evita problemas de fuso horário
+      const year = matchDate.getFullYear()
+      const month = matchDate.getMonth()
+      const day = matchDate.getDate()
+      
+      // Criar uma data local apenas com ano/mês/dia (sem hora) para usar como chave
+      const localDate = new Date(year, month, day)
+      const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      
+      if (!acc[dateKey]) {
+        // Formatar label usando a data original do match (com fuso horário correto)
+        const formattedDate = format(matchDate, "EEEE, d 'de' MMMM", { locale: ptBR })
+        const dateLabel = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)
+        
+        acc[dateKey] = {
+          matches: [],
+          date: localDate,
+          dateLabel,
+        }
+      }
+      acc[dateKey].matches.push(match)
+      return acc
+    }, {} as Record<string, { matches: Match[], date: Date | null, dateLabel: string }>)
+
+    // Converter para array e ordenar por data
+    return Object.values(grouped)
+      .sort((a, b) => {
+        if (!a.date) return 1
+        if (!b.date) return -1
+        return a.date.getTime() - b.date.getTime()
+      })
+  }, [matches])
+
+  // Handler para clicar no card (navega para fazer palpite)
+  const handleCardClick = useCallback(() => {
+    if (allowsNewBets && selectedRound) {
+      navigate(`/games?round=${selectedRound}`)
     }
-  }
+  }, [allowsNewBets, selectedRound, navigate])
 
   return (
     <ContentWrapper>
@@ -417,116 +445,40 @@ export default function Matches() {
         )}
 
         {matches.length > 0 && (
-          <>
-            <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-            {matches.map((match, index) => {
-              const displayInfo = getMatchDisplayInfo(match)
-
-              // Determinar classes CSS baseadas no status do jogo
-              const cardClasses = displayInfo.isLive
-                ? 'border-2 border-yellow-400 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-lg'
-                : displayInfo.isFinished
-                ? 'border-2 border-green-400 bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg'
-                : ''
-
-              return (
-                <Card key={match.id} className={cn("p-3", cardClasses)}>
+          <div className="space-y-6">
+            {matchesByDate.map((group, groupIndex) => (
+              <div key={group.dateLabel || 'sem-data'} className="space-y-3">
+                {/* Header de data - apenas se houver múltiplas datas */}
+                {matchesByDate.length > 1 && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: Math.min(index * 0.01, 0.1), // Delay máximo de 0.1s no mobile
-                      duration: 0.2, // Animação mais rápida
-                      ease: "easeOut"
-                    }}
+                    transition={{ delay: groupIndex * 0.05 }}
+                    className="flex items-center gap-3"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Dia da semana em cima, data e hora embaixo */}
-                      <div className="flex flex-col items-start justify-center flex-shrink-0 min-w-[4rem]">
-                        <span className={cn(
-                          "text-[10px] font-medium uppercase tracking-wide leading-tight block",
-                          displayInfo.isLive && "text-yellow-300",
-                          displayInfo.isFinished && "text-green-300",
-                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                        )}>
-                          {displayInfo.dateDisplay ? format(new Date(`${match.date}T${match.time}`), "EEE", { locale: ptBR }) : "---"}
-                        </span>
-                        <span className={cn(
-                          "text-[9px] font-medium leading-tight block",
-                          displayInfo.isLive && "text-yellow-300",
-                          displayInfo.isFinished && "text-green-300",
-                          !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                        )}>
-                          {displayInfo.dateDisplay ? format(new Date(`${match.date}T${match.time}`), "dd/MM HH:mm", { locale: ptBR }) : "--/-- --:--"}
-                        </span>
-                      </div>
-
-                      {/* Separador vertical */}
-                      <div className={cn(
-                        "h-6 w-px flex-shrink-0",
-                        displayInfo.isLive && "bg-yellow-400",
-                        displayInfo.isFinished && "bg-green-400",
-                        !displayInfo.isLive && !displayInfo.isFinished && "bg-border"
-                      )} />
-
-                      {/* Time casa 0 x 0 time visitante */}
-                      <div className="flex-1 flex items-center min-w-0">
-                        {/* Time casa */}
-                        <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-                          <TeamLogo teamName={match.homeTeam} logo={match.homeTeamLogo} size="sm" className="h-6 w-6 mb-0.5" noCircle />
-                          <span className={cn(
-                            "text-xs font-semibold truncate text-center leading-tight max-w-[5.5rem]",
-                            displayInfo.isLive && "text-yellow-300",
-                            displayInfo.isFinished && "text-green-300",
-                            !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                          )}>{getTeamDisplayName(match.homeTeam)}</span>
-                        </div>
-
-                        {/* Placar centralizado */}
-                        <div className="w-[60px] flex items-center justify-center flex-shrink-0">
-                          <span className={cn(
-                            "text-base font-bold flex-shrink-0 min-w-[3rem] text-center",
-                            displayInfo.showScore && displayInfo.scoreDisplay
-                              ? displayInfo.isLive
-                                ? "text-yellow-300"
-                                : displayInfo.isFinished
-                                ? "text-green-300"
-                                : "text-foreground"
-                              : "text-muted-foreground/40"
-                          )}>
-                            {displayInfo.showScore && displayInfo.scoreDisplay ? displayInfo.scoreDisplay : "0 × 0"}
-                          </span>
-                        </div>
-
-                        {/* Time visitante */}
-                        <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-                          <TeamLogo teamName={match.awayTeam} logo={match.awayTeamLogo} size="sm" className="h-6 w-6 mb-0.5" noCircle />
-                          <span className={cn(
-                            "text-xs font-semibold truncate text-center leading-tight max-w-[5.5rem]",
-                            displayInfo.isLive && "text-yellow-300",
-                            displayInfo.isFinished && "text-green-300",
-                            !displayInfo.isLive && !displayInfo.isFinished && "text-foreground"
-                          )}>{getTeamDisplayName(match.awayTeam)}</span>
-                        </div>
-                      </div>
-
-                      {/* Status do lado direito - apenas ícones */}
-                      <div className="flex items-center flex-shrink-0">
-                        {displayInfo.isLive ? (
-                          <Radio className="h-4 w-4 text-yellow-400 animate-pulse" />
-                        ) : displayInfo.isFinished ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-400" />
-                        ) : (
-                          <Clock className="h-4 w-4 text-muted-foreground/60" />
-                        )}
-                      </div>
-                    </div>
+                    <div className="flex-1 h-px bg-border" />
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-2">
+                      {group.dateLabel}
+                    </h2>
+                    <div className="flex-1 h-px bg-border" />
                   </motion.div>
-                </Card>
-              )
-            })}
-            </div>
-          </>
+                )}
+
+                {/* Grid de matches */}
+                <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+                  {group.matches.map((match, index) => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      index={index}
+                      onClick={allowsNewBets ? handleCardClick : undefined}
+                      showFullDate={matchesByDate.length === 1}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Mensagem de rodada bloqueada */}

@@ -1,12 +1,16 @@
 import { authService } from './auth.service'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+import { API_BASE_URL } from '@/config/api'
 
 interface ApiError {
   message: string
   status: number
   error?: string
   errors?: Array<{ msg?: string; message?: string; param?: string; location?: string }>
+  isConnectionError?: boolean
+  isDatabaseError?: boolean
+  isAzure?: boolean
+  details?: string
+  originalError?: any
 }
 
 class ApiService {
@@ -34,11 +38,20 @@ class ApiService {
 
     const url = `${this.baseURL}${endpoint}`
     
+    // Criar AbortController para timeout
+    const controller = new AbortController()
+    let timeoutId: NodeJS.Timeout | null = null
+    
     try {
+      timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos de timeout
+      
       const response = await fetch(url, {
         ...options,
         headers,
+        signal: controller.signal,
       })
+      
+      if (timeoutId) clearTimeout(timeoutId)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }))
@@ -51,6 +64,25 @@ class ApiService {
             message: errorMessages.join('. '),
             status: response.status,
             errors: errorData.errors, // Incluir array completo para tratamento específico
+          }
+          console.error(`[API ERROR] ${response.status}: ${error.message}`, errorData)
+          throw error
+        }
+        
+        // Verificar se é erro de banco de dados (503)
+        if (response.status === 503 && errorData.error === 'DATABASE_CONNECTION_ERROR') {
+          const isAzure = errorData.isAzure === true
+          const message = isAzure
+            ? 'Não foi possível conectar ao PostgreSQL no Azure. Verifique as regras de firewall do Azure.'
+            : (errorData.message || 'Banco de dados não está acessível. O servidor não consegue se conectar ao PostgreSQL.')
+          
+          const error: ApiError = {
+            message,
+            status: 503,
+            error: 'DATABASE_CONNECTION_ERROR',
+            isDatabaseError: true,
+            isAzure,
+            details: errorData.details
           }
           console.error(`[API ERROR] ${response.status}: ${error.message}`, errorData)
           throw error
@@ -74,14 +106,28 @@ class ApiService {
       
       return {} as T
     } catch (error: any) {
+      // Limpar timeout em caso de erro
+      if (timeoutId) clearTimeout(timeoutId)
       console.error(`[API CATCH] ${endpoint}:`, error)
       
       // Se for erro de rede (não conseguiu conectar), manter erro específico para tratamento no componente
-      if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError') || error?.name === 'TypeError') {
+      if (
+        error?.message?.includes('Failed to fetch') || 
+        error?.message?.includes('NetworkError') || 
+        error?.message?.includes('timeout') ||
+        error?.message?.includes('Connection terminated') ||
+        error?.name === 'TypeError' ||
+        error?.name === 'AbortError'
+      ) {
+        const errorMessage = error?.name === 'AbortError' || error?.message?.includes('timeout')
+          ? 'Timeout na conexão. Verifique se o servidor está acessível e tente novamente.'
+          : 'Erro de conexão. Verifique se o servidor está rodando e acessível.'
+        
         throw {
-          message: 'Erro de conexão. Verifique se o servidor está rodando.',
+          message: errorMessage,
           status: 0,
-          isConnectionError: true
+          isConnectionError: true,
+          originalError: error
         }
       }
       
